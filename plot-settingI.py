@@ -102,7 +102,7 @@ for i, name in enumerate(dataset_list):
 
     if i == 0:
         # Plot data for each model and conformal method
-        line1, = ax.plot(df_list[i]['fdpn_cs2union'], df_list[i]['powern_cs2inter'],
+        line1, = ax.plot(df_list[i]['fdpn_cs2inter'], df_list[i]['powern_cs2inter'],
                          label='Baseline Conformal', marker='o', color='red', alpha=0.8)
 
         # line2, = ax.plot(df_list[i]['fdpn_cs2inter'], df_list[i]['powern_cs2inter'],
@@ -116,7 +116,7 @@ for i, name in enumerate(dataset_list):
 
         ax.legend(loc='best', bbox_to_anchor=(4.9, -3.1), frameon=True, shadow=False, ncol=3, fontsize=22)
     else:
-        ax.plot(df_list[i]['fdpn_cs2union'], df_list[i]['powern_cs2inter'],
+        ax.plot(df_list[i]['fdpn_cs2inter'], df_list[i]['powern_cs2inter'],
                 label='Baseline Conformal', marker='o', color='red', alpha=0.8)
         # ax.plot(df_list[i]['fdpn_cs2inter'], df_list[i]['powern_cs2inter'],
         #         label='Two-stage Conformal Inter: Power', marker='o', color='red', alpha=0.8)
@@ -301,7 +301,7 @@ for i, name in enumerate(dataset_list):
 
     if i == 0:
         # Plot data for each model and conformal method
-        line1, = ax.plot(df_list[i]['fdpn_cs2union'], df_list[i]['powern_cs2inter'],
+        line1, = ax.plot(df_list[i]['fdpn_cs2inter'], df_list[i]['powern_cs2inter'],
                          label='Baseline Conformal', marker='o', color='red', alpha=0.8)
 
         # line2, = ax.plot(df_list[i]['fdpn_cs2inter'], df_list[i]['powern_cs2inter'],
@@ -315,7 +315,7 @@ for i, name in enumerate(dataset_list):
 
         ax.legend(loc='best', bbox_to_anchor=(4.9, -3.1), frameon=True, shadow=False, ncol=3, fontsize=22)
     else:
-        ax.plot(df_list[i]['fdpn_cs2union'], df_list[i]['powern_cs2inter'],
+        ax.plot(df_list[i]['fdpn_cs2inter'], df_list[i]['powern_cs2inter'],
                 label='Baseline Conformal', marker='o', color='red', alpha=0.8)
         # ax.plot(df_list[i]['fdpn_cs2inter'], df_list[i]['powern_cs2inter'],
         #         label='Two-stage Conformal Inter: Power', marker='o', color='red', alpha=0.8)
