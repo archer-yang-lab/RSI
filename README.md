@@ -5,8 +5,13 @@ Beyond Go/No-Go Decisions: A  Regional Selection Framework for Uncertainty-Aware
 
 | File | Description |
 |------|-------------|
-| `paper-extra-clipped.py` | Main experiment script for the clipped-score version with signed error score functions. |
 | `paper-verify.py` | Appendix B.3 Conformal Selection with Different Data Transformations|
+| `paper-extra-clipped.py` | Main experiment script for the clipped-score version with signed error score functions. |
+| `paper-extra-clipped.py` | Main experiment script for the clipped-score version with signed error score functions. |
+
+
+
+
 | `paper-new-extra.py` | Extended updated experiment script. |
 | `paper-new.py` | Main updated experiment script for the paper. |
 | `paper-signed.py` | Experiment script for signed-score variants. |
