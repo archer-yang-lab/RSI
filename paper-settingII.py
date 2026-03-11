@@ -18,37 +18,6 @@ class Timer:
     def __exit__(self, *args):
         self.end_time = time.time()
         self.runtime = self.end_time - self.start_time
-#here we add a cost in eval_o function
-gray_cost=1
-red_green_cost=2
-def eval_new(Y, rejected_1, rejected_2, lower, higher):
-    # true positives for each threshold
-    true_reject_1 = np.sum(Y <= lower)
-    true_reject_2 = np.sum(Y >= higher)
-
-    # If rejected_1 is empty, all outputs set to 0 or np.nan as fallback
-    if len(rejected_1) == 0:
-        fdp_1 = 0.0
-        fdp_2 = 0.0
-        power1 = 0.0
-        power2 = 0.0
-    else:
-        # safe index
-        Y_r1 = Y[rejected_1]
-        if len(rejected_2) == 0:
-            fdp_1 = np.sum(lower < Y_r1) / len(rejected_1)
-            fdp_2 = np.sum((lower < Y_r1) & (higher > Y_r1)) / len(rejected_1)
-            power1 = np.sum(lower >= Y_r1) / true_reject_1 if true_reject_1 > 0 else 0.0
-            power2 = np.sum((lower >= Y_r1) | (higher <= Y_r1)) / (true_reject_1 + true_reject_2) if (true_reject_1 + true_reject_2) > 0 else 0.0
-        else:
-            union12 = np.array(list(set(rejected_1) | set(rejected_2)))
-            Y_union = Y[union12]
-            fdp_1 = np.sum(lower < Y[rejected_1]) / len(rejected_1)
-            fdp_2 = np.sum((lower < Y_union) & (higher > Y_union)) / len(union12)
-            power1 = np.sum(lower >= Y[rejected_1]) / true_reject_1 if true_reject_1 > 0 else 0.0
-            power2 = np.sum((lower >= Y_union) | (higher <= Y_union)) / (true_reject_1 + true_reject_2) if (true_reject_1 + true_reject_2) > 0 else 0.0
-
-    return fdp_1, fdp_2, power1, power2
 
 def BH(calib_scores, test_scores, q=0.1, extra_info=None):
     ntest = len(test_scores)
@@ -99,7 +68,6 @@ if args.sample < 1:
 thresholds_map1 = {'NK1': 8.5, 'PGP': 0.1, 'LOGD': 3, '3A4': 4.5, 'CB1': 6.5, 'DPP4': 6, 'HIVINT': 6, 'HIVPROT': 7, 'METAB': 40, 'OX1': 5.8, 'OX2': 6, 'PPB': 1, 'RAT_F': 1.0, 'TDI': 0, 'THROMBIN': 6}
 thresholds_map2 = {'NK1': 9.5, 'PGP': 0.8, 'LOGD': 5, '3A4': 6, 'CB1': 8.0, 'DPP4': 7, 'HIVINT': 7, 'HIVPROT': 9, 'METAB': 70, 'OX1': 7.5, 'OX2': 8, 'PPB': 2, 'RAT_F': 1.9, 'TDI': 1, 'THROMBIN': 9}
 
-
 threshold_1 = thresholds_map1[dataset_name]
 threshold_2 = thresholds_map2[dataset_name]
 
@@ -108,12 +76,10 @@ total_X = dataset.drop(columns=['MOLECULE', 'Act']).to_numpy()
 
 Xtc, Xtest, Ytc, Ytest = train_test_split(total_X, total_Y, test_size=15/100, shuffle=True) # tc: train and calib
 
-# ofdp_nominals = np.linspace(0.1, 0.5, 9)
 fdp_nominals = np.linspace(0.1, 1.0, 9)
 all_res = pd.DataFrame()
 epsilon = 1e-8
 
-# all_res['ofdp_nominals'] = ofdp_nominals
 all_res['fdp_nominals'] = fdp_nominals
 
 ''' single stage'''
@@ -145,44 +111,37 @@ def eval_n(Y, rejected_1, lower, higher):
     true_reject_1 = np.sum((lower >= Y)|(Y >= higher))
     if len(rejected_1) == 0:
         fdp = 0
-        power1 = 0
-        cost = 0
         power = 0
     else:
         fdp = np.sum((lower < Y[rejected_1]) & (higher > Y[rejected_1])) / len(rejected_1)
-        power1 = np.sum((lower >= Y[rejected_1])|(higher <= Y[rejected_1])) / true_reject_1 if true_reject_1 != 0 else 0
-        set_1c = np.delete(Y, rejected_1)
-        cost = gray_cost*len(set_1c)
-        power = power1
+        power = np.sum((lower >= Y[rejected_1])|(higher <= Y[rejected_1])) / true_reject_1 if true_reject_1 != 0 else 0
     return fdp, power
 
 ''' single stage conformal selection '''
 fdpn_bcs, powern_bcs= [], []
-fdpn_cs,powern_cs= [], []
+fdpn_cs, powern_cs= [], []
 from sklearn.ensemble import RandomForestClassifier
 with Timer() as timer:
     rfc = RandomForestClassifier(n_estimators=100, max_depth=20, max_features='sqrt',criterion="entropy")
     Xtrain, Xcalib, Ytrain, Ycalib = train_test_split(Xtc, Ytc, train_size=50/85, shuffle=True)
     rf = RandomForestRegressor(n_estimators=100, max_depth=20, max_features='sqrt')
+    #binary classification model
     rfc.fit(Xtrain, ((threshold_1 >= Ytrain) | (threshold_2 <= Ytrain)))
+    #regression model
     rf.fit(Xtrain, Ytrain)
     Ycalib_pred = rf.predict(Xcalib)
     Ytest_pred = rf.predict(Xtest)
     for i, fdp_nominal in enumerate(fdp_nominals):
         calib_scores_2clip = 1000*((threshold_1 >= Ycalib) | (threshold_2 <= Ycalib)) - rfc.predict_proba(Xcalib)[:, 1]  # Ycalib_cs > 0.5 <=> original Ycalib_cs < threshold
         test_scores = -rfc.predict_proba(Xtest)[:, 1]
-        # print(test_scores[1:3])
         BH_2clip = BH(calib_scores_2clip, test_scores, fdp_nominal)
-        # print(BH_2clip)
         fdp, power = eval_n(Ytest, BH_2clip, threshold_1, threshold_2)
         fdpn_bcs.append(fdp)
         powern_bcs.append(power)
 
         calib_scores_2clip = 1000 * ((threshold_1 >= Ycalib) | (threshold_2 <= Ycalib)) - Ycalib_pred
         test_scores = -Ytest_pred
-        # print(test_scores[1:3])
         BH_2clip = BH(calib_scores_2clip, test_scores, fdp_nominal)
-        # print(BH_2clip)
         fdp, power = eval_n(Ytest, BH_2clip, threshold_1, threshold_2)
         fdpn_cs.append(fdp)
         powern_cs.append(power)
@@ -220,11 +179,10 @@ with Timer() as timer:
 all_res['fdpn_cs2union'] = fdpn_cs2union
 all_res['powern_cs2union'] = powern_cs2union
 
-
-
 out_dir = os.path.join('result-union', f'{dataset_name} {args.sample:.2f}')
 
 if not os.path.exists(out_dir):
     os.makedirs(out_dir)
 
 all_res.to_csv(os.path.join('result-union', f'{dataset_name} {args.sample:.2f}', f'{dataset_name} {args.sample:.2f} {args.seed}.csv'))
+
