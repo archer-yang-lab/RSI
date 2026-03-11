@@ -154,20 +154,11 @@ def eval_n(Y, rejected_1, lower, higher):
         set_1c = np.delete(Y, rejected_1)
         cost = gray_cost*len(set_1c)
         power = power1
-    return fdp, power1, cost, power
-
-def MCCS_score(y, pred, c_kL, c_kR, M):
-
-    is_inside = (y <= c_kL) | (y >= c_kR)
-    score_inside = M - np.minimum(c_kL -pred, pred-c_kR)
-    score_outside = -np.maximum( pred -c_kL, c_kR - pred)
-    scores = np.where(is_inside, score_inside, score_outside)
-
-    return scores
+    return fdp, power
 
 ''' single stage conformal selection '''
-fdpn_bcs, costn_bcs, powern_bcs, powers_bcs= [], [], [], []
-fdpn_cs, costn_cs, powern_cs, powers_cs= [], [], [], []
+fdpn_bcs, powern_bcs= [], []
+fdpn_cs,powern_cs= [], []
 from sklearn.ensemble import RandomForestClassifier
 with Timer() as timer:
     rfc = RandomForestClassifier(n_estimators=100, max_depth=20, max_features='sqrt',criterion="entropy")
@@ -183,37 +174,28 @@ with Timer() as timer:
         # print(test_scores[1:3])
         BH_2clip = BH(calib_scores_2clip, test_scores, fdp_nominal)
         # print(BH_2clip)
-        fdp, power, cost,powers = eval_n(Ytest, BH_2clip, threshold_1, threshold_2)
+        fdp, power = eval_n(Ytest, BH_2clip, threshold_1, threshold_2)
         fdpn_bcs.append(fdp)
         powern_bcs.append(power)
-        costn_bcs.append(cost)
-        powers_bcs.append(powers)
 
         calib_scores_2clip = 1000 * ((threshold_1 >= Ycalib) | (threshold_2 <= Ycalib)) - Ycalib_pred
         test_scores = -Ytest_pred
         # print(test_scores[1:3])
         BH_2clip = BH(calib_scores_2clip, test_scores, fdp_nominal)
         # print(BH_2clip)
-        fdp, power, cost, powers = eval_n(Ytest, BH_2clip, threshold_1, threshold_2)
+        fdp, power = eval_n(Ytest, BH_2clip, threshold_1, threshold_2)
         fdpn_cs.append(fdp)
         powern_cs.append(power)
-        costn_cs.append(cost)
-        powers_cs.append(powers)
 
 
 all_res['fdpn_bcs'] = fdpn_bcs
-all_res['costn_bcs'] = costn_bcs
 all_res['powern_bcs'] = powern_bcs
-all_res['powers_bcs'] = powers_bcs
 
 all_res['fdpn_cs'] = fdpn_cs
-all_res['costn_cs'] = costn_cs
 all_res['powern_cs'] = powern_cs
-all_res['powers_cs'] = powers_cs
-
 
 ''' two stage conformal selection'''
-fdpn_cs2union, pcern_cs2union, powern_cs2union= [], [], []
+fdpn_cs2union, powern_cs2union= [], []
 with Timer() as timer:
     Xtrain, Xcalib, Ytrain, Ycalib = train_test_split(Xtc, Ytc, train_size=50/85, shuffle=True)
     rf = RandomForestRegressor(n_estimators=100, max_depth=20, max_features='sqrt')
@@ -231,13 +213,11 @@ with Timer() as timer:
         BH_2clip_union = np.intersect1d(BH_2clipstep1, BH_2clipstep2)
         BH_2clip = BH_2clip_union.astype(int)
 
-        fdp, pcer, power = eval(Ytest, BH_2clip, threshold_1, threshold_2)
+        fdp, power = eval_n(Ytest, BH_2clip, threshold_1, threshold_2)
         fdpn_cs2union.append(fdp)
-        pcern_cs2union.append(pcer)
         powern_cs2union.append(power)
 
 all_res['fdpn_cs2union'] = fdpn_cs2union
-all_res['pcern_cs2union'] = pcern_cs2union
 all_res['powern_cs2union'] = powern_cs2union
 
 

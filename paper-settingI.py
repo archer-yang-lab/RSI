@@ -181,7 +181,7 @@ all_res['powern_cs'] = powern_cs
 all_res['time_cs'] = [timer.runtime] * len(fdp_nominals)
 
 ''' two stage conformal selection'''
-fdpn_cs2inter, pcern_cs2inter, powern_cs2inter= [], [], []
+fdpn_cs2inter, powern_cs2inter= [], []
 with Timer() as timer:
     Xtrain, Xcalib, Ytrain, Ycalib = train_test_split(Xtc, Ytc, train_size=50/85, shuffle=True)
     rf = RandomForestRegressor(n_estimators=100, max_depth=20, max_features='sqrt')
@@ -199,14 +199,12 @@ with Timer() as timer:
         BH_2clip_inter = np.intersect1d(BH_2clipstep1, BH_2clipstep2)
         BH_2clip = BH_2clip_inter.astype(int)
 
-        fdp, pcer, power = eval_inter(Ytest, BH_2clip, threshold_1, threshold_2)
+        fdp, power = eval_inter(Ytest, BH_2clip, threshold_1, threshold_2)
         fdpn_cs2inter.append(fdp)
-        pcern_cs2inter.append(pcer)
         powern_cs2inter.append(power)
 
 
 all_res['fdpn_cs2inter'] = fdpn_cs2inter
-all_res['pcern_cs2inter'] = pcern_cs2inter
 all_res['powern_cs2inter'] = powern_cs2inter
 
 
