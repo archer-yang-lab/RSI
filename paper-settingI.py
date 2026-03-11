@@ -101,7 +101,7 @@ all_res['fdp_nominals'] = fdp_nominals
 ''' single stage'''
 
 ''' single stage sheridan '''
-fdpn_sh, costn_sh, powern_sh, powers_sh= [], [], [], []
+fdpn_sh, powern_sh= [], []
 with Timer() as timer:
     rf = RandomForestRegressor(n_estimators=100, max_depth=20, max_features='sqrt')
     rf_rmse = RandomForestRegressor(n_estimators=100, max_depth=20, max_features='sqrt')
@@ -121,16 +121,13 @@ with Timer() as timer:
     rmse_calib1 = rf_rmse.predict(np.column_stack((Ypred_calib1, var_calib1)))
 
     z_calib1_1 = (np.minimum(threshold_2 - Ypred_calib1, Ypred_calib1 - threshold_1)) / (rmse_calib1 + epsilon)
-    # z_calib1_2 = (Ypred_calib1 - threshold_2) / rmse_calib1
-    # z_calib1_1 = (np.minimum(threshold_1 - Ypred_calib1, Ypred_calib1 - threshold_2)) / (rmse_calib1 + epsilon)
 
     Ypred_test = rf.predict(Xtest)
     all_Ypred = np.column_stack([tree.predict(Xtest) for tree in rf.estimators_])
     var_test = np.var(all_Ypred, axis=1)
     rmse_test = rf_rmse.predict(np.column_stack((Ypred_test, var_test)))
     z_test_1 = (np.minimum(threshold_2 - Ypred_test,Ypred_test - threshold_1 )) / (rmse_test + epsilon)
-    # z_test_1 = (np.minimum(threshold_1 - Ypred_test, Ypred_test - threshold_2)) / (rmse_test + epsilon)
-    # z_test_2 = (Ypred_test - threshold_2) / rmse_test
+
     for i, fdp_nominal in enumerate(fdp_nominals):
         # 1. Reset min_R_1 at the START of each loop for fdp_nominal.
         # This is a critical bug fix from your original code.
@@ -214,3 +211,4 @@ if not os.path.exists(out_dir):
     os.makedirs(out_dir)
 
 all_res.to_csv(os.path.join('result-inter', f'{dataset_name} {args.sample:.2f}', f'{dataset_name} {args.sample:.2f} {args.seed}.csv'))
+
