@@ -22,3 +22,4 @@ Run the script with:
 
 ```bash
 python paper-trans.py CB1 1.0 42
+python plot-trans.py 100
