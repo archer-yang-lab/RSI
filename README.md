@@ -23,3 +23,8 @@ Run the script with:
 ```bash
 python paper-trans.py CB1 1.0 42
 python plot-trans.py 100
+### Argument Description
+
+- `<dataset_name>`: name of the dataset, for example `CB1`
+- `<sample_ratio>`: sampling ratio, for example `1.0`
+- `<n_itr>`: number of iterations, for example `42`
