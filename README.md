@@ -21,10 +21,20 @@ Beyond Go/No-Go Decisions: A  Regional Selection Framework for Uncertainty-Aware
 Run the script with:
 
 ```bash
+###for trans, score,settingI,settingII
 python paper-trans.py CB1 1.0 42
 python plot-trans.py 100
 ### Argument Description
 - `<dataset_name>`: name of the dataset, for example `CB1`
 - `<sample_ratio>`: sampling ratio, for example `1.0`
 - `<seed>`: random seed for reproducibility, for example `42`
+- `<n_itr>`: number of iterations, for example `100`
+###for model
+python paper-model.py CB1 1.0 42 nn
+python plot-model.py 100
+### Argument Description
+- `<dataset_name>`: name of the dataset, for example `CB1`
+- `<sample_ratio>`: sampling ratio, for example `1.0`
+- `<seed>`: random seed for reproducibility, for example `42`
+- `<model>`: model for prediction, for example `nn` (nn, lin, rf)
 - `<n_itr>`: number of iterations, for example `100`
