@@ -15,3 +15,10 @@ Beyond Go/No-Go Decisions: A  Regional Selection Framework for Uncertainty-Aware
 | `plot-settingI.py` | Plotting script for Setting I results. |
 | `plot-settingII.py` | Plotting script for Setting II results. |
 | `plot-trans.py` | Plotting script for transformation-related results. |
+
+## Usage
+
+Run the script with:
+
+```bash
+python paper-trans.py CB1 1.0 42
