@@ -90,12 +90,10 @@ total_X = dataset.drop(columns=['MOLECULE', 'Act']).to_numpy()
 
 Xtc, Xtest, Ytc, Ytest = train_test_split(total_X, total_Y, test_size=15/100, shuffle=True) # tc: train and calib
 
-# ofdp_nominals = np.linspace(0.1, 0.5, 9)
 fdp_nominals = np.linspace(0.1, 1.0, 9)
 all_res = pd.DataFrame()
 epsilon = 1e-8
 
-# all_res['ofdp_nominals'] = ofdp_nominals
 all_res['fdp_nominals'] = fdp_nominals
 
 ''' single stage'''
