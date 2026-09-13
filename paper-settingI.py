@@ -178,7 +178,7 @@ all_res['fdpn_cs'] = fdpn_cs
 all_res['powern_cs'] = powern_cs
 all_res['time_cs'] = [timer.runtime] * len(fdp_nominals)
 
-''' two stage conformal selection'''
+''' two stage Baseline conformal selection'''
 fdpn_cs2inter, powern_cs2inter= [], []
 with Timer() as timer:
     Xtrain, Xcalib, Ytrain, Ycalib = train_test_split(Xtc, Ytc, train_size=50/85, shuffle=True)
