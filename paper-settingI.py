@@ -133,9 +133,13 @@ with Timer() as timer:
         # 1. Reset min_R_1 at the START of each loop for fdp_nominal.
         # This is a critical bug fix from your original code.
         min_R_1 = None
-
         # Search for the optimal R on the calibration set
-        for R in np.linspace(3, -3, 500):
+        threshold_grid = np.linspace(
+            np.max(z_calib1_1),
+            np.min(z_calib1_1),
+            500,
+        )
+        for R in threshold_grid:
             try_r_sel1 = [j for j in range(len(z_calib1_1)) if z_calib1_1[j] >= R]
             try_fdr, _ = eval_inter(Ycalib1, try_r_sel1, threshold_1, threshold_2)
             # Check if the current FDP meets the condition
