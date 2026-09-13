@@ -227,7 +227,7 @@ For the representative datasets used in the cost-aware analysis, run:
 python plot-cost-three-panel.py 1.00 \
   --result_dir result-cost-0518raw \
   --output_dir figure-cost-0518raw-three-panel \
-  --datasets PPB CB1 DPP4 OX2 \
+  --datasets HIVPROT OX2 hERG \
   --q_values 0.2 0.3 \
   --methods RSI-EC RSI-CS \
   --eta_grid 0,0.001,0.002,0.003,0.005,0.0075,0.01,0.015,0.02,0.03,0.04,0.05,0.075,0.1,0.15,0.2,0.3,0.5
