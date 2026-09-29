@@ -382,7 +382,7 @@ def plot_absolute_cell(fig, cell_spec, df, dataset_name, method, q_value, show_x
 
 def make_method_absolute_figure(dataset_list, sample, q_value, method, result_dir, out_dir, n_itr, seed_start, eta_grid, strict=False):
     nrows, ncols = 3, 5
-    fig = plt.figure(figsize=(36, 20))
+    fig = plt.figure(figsize=(36, 25))
     outer = fig.add_gridspec(nrows, ncols, wspace=0.42, hspace=0.46)
 
     for idx in range(nrows * ncols):

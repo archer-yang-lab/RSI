@@ -2,383 +2,350 @@ import argparse
 import os
 
 import numpy as np
-
-SCRIPT_VERSION = "three-panel-hist-v12-even-eta-axis"
 import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.ticker import FuncFormatter, MaxNLocator
 
-# ============================================================
-# Three-panel row figures for paper-final-cost-0505.py
-#
-# For each q and each method, this script makes one figure in which
-# each dataset occupies one row and the three columns are:
-#   (1) Power--cost trade-off as eta varies
-#   (2) Delta metrics relative to eta = 0
-#   (3) Delta selected-region counts relative to eta = 0
-#
-# Expected input file for each dataset:
-#   <result_dir>/<dataset> <sample>/<dataset> <sample> aggregated_over_seeds.csv
-#
-# Example:
-#   result-cost-0505/3A4 1.00/3A4 1.00 aggregated_over_seeds.csv
-#
-# Example commands:
-#   python plot-cost-0505-15-three-panel-hist.py 1.00 --datasets 3A4 --methods RSI-EC --q_values 0.2
-#   python plot-cost-0505-15-three-panel-hist.py 1.00 --datasets 3A4 DPP4 HIVPROT OX2 PPB --methods RSI-CS --q_values 0.2 0.3
-#   python plot-cost-0505-15-three-panel-hist.py 1.00 --methods RSI-EC RSI-CS --q_values 0.2
-# ============================================================
+SCRIPT_VERSION = "three-panel-direct-seed-mean-v1"
 
-# ALL_DATASETS = [
-#     '3A4', 'CB1', 'DPP4',
-#     'HIVINT', 'HIVPROT', 'LOGD',
-#     'METAB', 'NK1', 'OX1',
-#     'OX2', 'PGP', 'PPB',
-#     'RAT_F', 'TDI', 'THROMBIN'
-# ]
-# ALL_DATASETS = [
-#     'PPB','OX2','DPP4', 'CB1'
-# ]
-ALL_DATASETS = [
-    'LOGD', 'RAT_F', 'HIVPROT','OX2'
-]
+REPRESENTATIVE_DATASETS = ['HIVPROT','OX2']
 
+LIGHT_GRAY = "#D9D9D9"
+COST_COLOR = "#5CBF60"
+POWER_COLOR = "#8C6BB1"
+FDP_COLOR = "#E85B5B"
+FAIL_COLOR = "#D95F02"
+IND_COLOR = "#7570B3"
+PASS_COLOR = "#1B9E77"
+ZERO_COLOR = "#666666"
 
-# ---------- colors ----------
-LIGHT_GRAY = '#D9D9D9'
-COST_COLOR = '#5CBF60'
-POWER_COLOR = '#8C6BB1'
-FDR_COLOR = '#E85B5B'
-FAIL_COLOR = '#D95F02'
-IND_COLOR = '#7570B3'
-PASS_COLOR = '#1B9E77'
-ZERO_COLOR = '#666666'
-
-# ---------- font sizes ----------
 TITLE_SIZE = 18
 AXIS_LABEL_SIZE = 16
 TICK_LABEL_SIZE = 14
 LEGEND_FONT_SIZE = 13
-SUPTITLE_SIZE = 20
 
-plt.style.use('default')
+plt.style.use("default")
 plt.rcParams.update({
-    'figure.facecolor': 'white',
-    'axes.facecolor': 'white',
-    'savefig.facecolor': 'white',
-    'axes.edgecolor': '#666666',
-    'axes.labelsize': AXIS_LABEL_SIZE,
-    'axes.titlesize': TITLE_SIZE,
-    'xtick.labelsize': TICK_LABEL_SIZE,
-    'ytick.labelsize': TICK_LABEL_SIZE,
-    'font.size': TICK_LABEL_SIZE,
-    'grid.color': LIGHT_GRAY,
-    'grid.alpha': 0.8,
-    'grid.linestyle': '-',
-    'font.weight': 'normal',
-    'axes.titleweight': 'normal',
-    'axes.labelweight': 'normal',
+    "figure.facecolor": "white",
+    "axes.facecolor": "white",
+    "savefig.facecolor": "white",
+    "axes.edgecolor": "#666666",
+    "axes.labelsize": AXIS_LABEL_SIZE,
+    "axes.titlesize": TITLE_SIZE,
+    "xtick.labelsize": TICK_LABEL_SIZE,
+    "ytick.labelsize": TICK_LABEL_SIZE,
+    "font.size": TICK_LABEL_SIZE,
+    "grid.color": LIGHT_GRAY,
+    "grid.alpha": 0.8,
+    "grid.linestyle": "-",
+    "font.weight": "normal",
+    "axes.titleweight": "normal",
+    "axes.labelweight": "normal",
 })
 
 
 def parse_eta_grid(grid_string):
+    if grid_string is None or str(grid_string).strip().lower() in {"", "all", "none"}:
+        return None
+
     values = []
-    for item in grid_string.split(','):
+    for item in str(grid_string).split(","):
         item = item.strip()
         if item:
             values.append(float(item))
-    if len(values) == 0:
-        raise ValueError('eta_grid must contain at least one numeric value.')
+
+    if not values:
+        return None
+
     return np.array(values, dtype=float)
 
 
 def q_to_tag(q):
-    return f'q{int(round(q * 10)):02d}'
+    return f"q{int(round(q * 10)):02d}"
 
 
 def method_to_tag(method):
-    return method.replace('RSI-', '').lower()
+    return method.replace("RSI-", "").lower()
 
 
-def format_param_label(v):
-    if pd.isna(v):
-        return ''
-    v = float(v)
-    if v.is_integer():
-        return str(int(v))
-    return f'{v:g}'
+def format_param_label(value):
+    if pd.isna(value):
+        return ""
+    value = float(value)
+    if value.is_integer():
+        return str(int(value))
+    return f"{value:g}"
 
 
 def nice_limit_from_values(values, default=1.0, pad=0.10):
     arr = np.asarray(values, dtype=float)
     arr = arr[np.isfinite(arr)]
+
     if arr.size == 0:
-        return (-default, default)
+        return -default, default
+
     lo = float(np.min(arr))
     hi = float(np.max(arr))
+
     if np.isclose(lo, hi):
         bump = default if np.isclose(lo, 0.0) else abs(lo) * 0.25
-        return (lo - bump, hi + bump)
+        return lo - bump, hi + bump
+
     span = hi - lo
-    return (lo - pad * span, hi + pad * span)
+    return lo - pad * span, hi + pad * span
 
 
-def nice_upper_bound(x, default=1.0):
-    if x is None or not np.isfinite(x) or x <= 0:
+def nice_upper_bound(value, default=1.0):
+    if value is None or not np.isfinite(value) or value <= 0:
         return default
-    return 1.10 * x
+    return 1.10 * value
 
 
 def normalize_axis_text(ax):
-    """Keep all visible text attached to an axis at normal weight."""
-    ax.title.set_fontweight('normal')
-    ax.xaxis.label.set_fontweight('normal')
-    ax.yaxis.label.set_fontweight('normal')
+    ax.title.set_fontweight("normal")
+    ax.xaxis.label.set_fontweight("normal")
+    ax.yaxis.label.set_fontweight("normal")
+
     for tick_label in ax.get_xticklabels() + ax.get_yticklabels():
-        tick_label.set_fontweight('normal')
+        tick_label.set_fontweight("normal")
 
 
 def normalize_legend_text(legend):
-    """Keep legend text at normal weight."""
     if legend is None:
         return
+
     for text in legend.get_texts():
-        text.set_fontweight('normal')
+        text.set_fontweight("normal")
+
     title = legend.get_title()
     if title is not None:
-        title.set_fontweight('normal')
+        title.set_fontweight("normal")
 
 
 def style_ax(ax):
-    ax.grid(True, axis='y')
+    ax.grid(True, axis="y")
     ax.set_axisbelow(True)
+
     for spine in ax.spines.values():
         spine.set_linewidth(0.7)
-        spine.set_edgecolor('gray')
-    ax.tick_params(axis='both', labelsize=TICK_LABEL_SIZE, length=2.2)
+        spine.set_edgecolor("gray")
+
+    ax.tick_params(axis="both", labelsize=TICK_LABEL_SIZE, length=2.2)
     normalize_axis_text(ax)
 
 
-def load_dataset_summary(result_dir, dataset_name, sample, strict=False):
-    csv_path = os.path.join(
-        result_dir,
-        f'{dataset_name} {sample:.2f}',
-        f'{dataset_name} {sample:.2f} aggregated_over_seeds.csv'
-    )
-
-    if not os.path.exists(csv_path):
-        msg = f'[Missing] {csv_path}'
-        if strict:
-            raise FileNotFoundError(msg)
-        print(msg)
-        return None
-
-    df = pd.read_csv(csv_path)
-    if df.empty:
-        msg = f'[Empty] {csv_path}'
-        if strict:
-            raise ValueError(msg)
-        print(msg)
-        return None
-
-    required_cols = {
-        'method', 'q', 'mean_fdr', 'mean_power', 'mean_average_cost',
-        'mean_n_selected_fail', 'mean_n_selected_ind', 'mean_n_selected_pass'
-    }
-    missing = required_cols.difference(df.columns)
-    if missing:
-        msg = f'{csv_path} is missing required columns: {sorted(missing)}'
-        if strict:
-            raise ValueError(msg)
-        print('[Invalid]', msg)
-        return None
-
-    return df
-
-
-def choose_eta_column(dsub, method):
-    """
-    The score parameter is plotted as eta regardless of how it was stored.
-      - eta: preferred after aggregation if eta is a grouping column
-      - mean_eta: older aggregated files
-      - gamma_ratio or lambda_ec: historical EC columns
-      - lambda: historical CS column
-    """
-    if 'eta' in dsub.columns and dsub['eta'].notna().any():
-        return 'eta', r'$\eta$'
-
-    if 'mean_eta' in dsub.columns and dsub['mean_eta'].notna().any():
-        return 'mean_eta', r'$\eta$'
-
-    if method == 'RSI-EC':
-        if 'gamma_ratio' in dsub.columns and dsub['gamma_ratio'].notna().any():
-            return 'gamma_ratio', r'$\eta$'
-        if 'lambda_ec' in dsub.columns and dsub['lambda_ec'].notna().any():
-            return 'lambda_ec', r'$\eta$'
-        raise ValueError('No eta column found for RSI-EC. Expected mean_eta, eta, gamma_ratio, or lambda_ec.')
-
-    if method == 'RSI-CS':
-        if 'lambda' in dsub.columns and dsub['lambda'].notna().any():
-            return 'lambda', r'$\eta$'
-        raise ValueError('No eta column found for RSI-CS. Expected mean_eta, eta, or lambda.')
-
-    raise ValueError("method must be 'RSI-EC' or 'RSI-CS'.")
-
-
-def grid_order_value(v, grid):
-    v = float(v)
-    for j, g in enumerate(grid):
-        if np.isclose(v, g, rtol=1e-7, atol=1e-12):
-            return j
-    return np.nan
-
-
-def filter_to_eta_grid(dsub, eta_col, eta_grid):
-    if dsub is None or dsub.empty:
-        return dsub
-
-    values = dsub[eta_col].astype(float).to_numpy()
-    keep = np.zeros(len(dsub), dtype=bool)
-    for g in eta_grid:
-        keep |= np.isclose(values, g, rtol=1e-7, atol=1e-12)
-
-    out = dsub.loc[keep].copy()
-    if out.empty:
-        return out
-
-    out['_eta_order'] = out[eta_col].apply(lambda v: grid_order_value(v, eta_grid))
-    out = out.sort_values('_eta_order')
-    return out.drop(columns=['_eta_order'])
-
-
-def get_method_q_data(df, method, q_value, eta_grid):
-    if df is None:
-        return pd.DataFrame(), None, None
-
-    dsub = df[(df['method'] == method) & (np.isclose(df['q'], q_value))].copy()
-    if dsub.empty:
-        return dsub, None, None
-
-    eta_col, eta_label = choose_eta_column(dsub, method)
-    dsub = dsub[dsub[eta_col].notna()].copy()
-    dsub = filter_to_eta_grid(dsub, eta_col, eta_grid)
-
-    if dsub.empty:
-        return dsub, eta_col, eta_label
-
-    metric_cols = [
-        col for col in [
-            'mean_fdr', 'mean_power', 'mean_average_cost',
-            'mean_n_selected', 'mean_n_selected_fail',
-            'mean_n_selected_ind', 'mean_n_selected_pass'
-        ]
-        if col in dsub.columns
+def seed_file_candidates(result_dir, dataset_name, sample, seed):
+    dataset_dir = os.path.join(result_dir, f"{dataset_name} {sample:.2f}")
+    return [
+        os.path.join(dataset_dir, f"{dataset_name} {sample:.2f} {seed}.csv"),
+        os.path.join(dataset_dir, f"{dataset_name} {sample:.2f} seed_{seed} summary_results.csv"),
     ]
 
-    # Safety: average duplicated eta rows if they occur.
-    if dsub.duplicated(subset=[eta_col]).any():
-        dsub = dsub.groupby(eta_col, as_index=False)[metric_cols].mean()
-        dsub['_eta_order'] = dsub[eta_col].apply(lambda v: grid_order_value(v, eta_grid))
-        dsub = dsub.sort_values('_eta_order').drop(columns=['_eta_order'])
 
-    return dsub, eta_col, eta_label
+def normalize_seed_summary(df):
+    df = df.copy()
+
+    if "eta" not in df.columns:
+        if "mean_eta" in df.columns:
+            df["eta"] = df["mean_eta"]
+        else:
+            df["eta"] = np.nan
+            if "gamma_ratio" in df.columns:
+                df.loc[df["method"] == "RSI-EC", "eta"] = df.loc[df["method"] == "RSI-EC", "gamma_ratio"]
+            if "lambda" in df.columns:
+                df.loc[df["method"] == "RSI-CS", "eta"] = df.loc[df["method"] == "RSI-CS", "lambda"]
+
+    rename_map = {
+        "mean_fdr": "fdp",
+        "mean_power": "power",
+        "mean_average_cost": "average_cost",
+        "mean_n_selected": "n_selected",
+        "mean_n_selected_fail": "n_selected_fail",
+        "mean_n_selected_ind": "n_selected_ind",
+        "mean_n_selected_pass": "n_selected_pass",
+    }
+    for old_name, new_name in rename_map.items():
+        if new_name not in df.columns and old_name in df.columns:
+            df[new_name] = df[old_name]
+
+    required = [
+        "method",
+        "q",
+        "eta",
+        "fdp",
+        "power",
+        "average_cost",
+        "n_selected_fail",
+        "n_selected_ind",
+        "n_selected_pass",
+    ]
+    missing = [col for col in required if col not in df.columns]
+    if missing:
+        raise ValueError(f"Missing required columns: {missing}")
+
+    out = df[required].copy()
+    out = out.dropna(subset=["method", "q", "eta"])
+    return out
 
 
-def draw_empty_panel(ax, title, message='No data'):
-    ax.text(0.5, 0.5, message, ha='center', va='center', fontsize=TITLE_SIZE, color='gray')
+def filter_eta_grid(df, eta_grid):
+    if eta_grid is None or df.empty:
+        return df
+
+    eta_values = df["eta"].astype(float).to_numpy()
+    keep = np.zeros(len(df), dtype=bool)
+
+    for eta in eta_grid:
+        keep |= np.isclose(eta_values, eta, rtol=1e-7, atol=1e-12)
+
+    return df.loc[keep].copy()
+
+
+def aggregate_seed_summaries(result_dir, dataset_name, sample, n_itr, seed_start=1, eta_grid=None, strict=False):
+    df_list = []
+
+    for seed in range(seed_start, seed_start + n_itr):
+        file_path = None
+        for candidate in seed_file_candidates(result_dir, dataset_name, sample, seed):
+            if os.path.exists(candidate):
+                file_path = candidate
+                break
+
+        if file_path is None:
+            msg = f"[Missing] {dataset_name}, seed={seed}"
+            if strict:
+                raise FileNotFoundError(msg)
+            print(msg)
+            continue
+
+        df = pd.read_csv(file_path)
+        df = normalize_seed_summary(df)
+        df["seed"] = seed
+        df_list.append(df)
+
+    if not df_list:
+        return pd.DataFrame()
+
+    all_df = pd.concat(df_list, ignore_index=True)
+    all_df = filter_eta_grid(all_df, eta_grid)
+
+    if all_df.empty:
+        return all_df
+
+    grouped = (
+        all_df
+        .groupby(["method", "q", "eta"], as_index=False, dropna=False)
+        .mean(numeric_only=True)
+        .rename(columns={
+            "fdp": "mean_fdr",
+            "power": "mean_power",
+            "average_cost": "mean_average_cost",
+            "n_selected_fail": "mean_n_selected_fail",
+            "n_selected_ind": "mean_n_selected_ind",
+            "n_selected_pass": "mean_n_selected_pass",
+        })
+        .sort_values(["method", "q", "eta"])
+        .reset_index(drop=True)
+    )
+    return grouped
+
+
+def get_method_q_data(df, method, q_value):
+    if df is None or df.empty:
+        return pd.DataFrame()
+
+    dsub = df[(df["method"] == method) & (np.isclose(df["q"], q_value))].copy()
+    if dsub.empty:
+        return dsub
+
+    return dsub.sort_values("eta").reset_index(drop=True)
+
+
+def draw_empty_panel(ax, title, message="No data"):
+    ax.text(0.5, 0.5, message, ha="center", va="center", fontsize=TITLE_SIZE, color="gray")
     ax.set_title(title, fontsize=TITLE_SIZE, pad=4)
     ax.set_xticks([])
     ax.set_yticks([])
+
     for spine in ax.spines.values():
-        spine.set_edgecolor('gray')
+        spine.set_edgecolor("gray")
         spine.set_linewidth(0.7)
 
 
-def get_base_row(dsub, eta_col):
-    base = dsub[np.isclose(dsub[eta_col].astype(float), 0.0)]
+def get_base_row(dsub):
+    base = dsub[np.isclose(dsub["eta"].astype(float), 0.0)]
     if base.empty:
         return None
     return base.iloc[0]
 
 
-def set_eta_ticks(ax, x, eta):
-    """Use evenly spaced x positions, while displaying the true eta values."""
+def set_eta_ticks(ax, x, eta_values):
     ax.set_xticks(x)
-    ax.set_xticklabels([format_param_label(v) for v in eta], rotation=45, ha='right')
+    ax.set_xticklabels([format_param_label(value) for value in eta_values], rotation=45, ha="right")
 
 
-# ============================================================
-# Panel 1: same split histogram/bar plot as plot-cost-0505-15.py
-# ============================================================
-def plot_power_cost_hist_cell(fig, cell_spec, dsub, eta_col, eta_label, dataset_name, q_value, show_xlabel=True, show_legend=False):
-    """
-    Reuse the original split bar/histogram style:
-      - top panel: average cost bars + FDR line on the right axis
-      - bottom panel: power bars, inverted vertically
-    """
+def first_panel_legend_handles():
+    return [
+        Line2D([0], [0], color=COST_COLOR, linewidth=7, alpha=0.85, label="Average cost"),
+        Line2D([0], [0], color=POWER_COLOR, linewidth=7, alpha=0.85, label="Power"),
+        Line2D([0], [0], color=FDP_COLOR, marker="o", linewidth=1.0, markersize=4, label="FDP"),
+    ]
+
+
+def plot_power_cost_hist_cell(fig, cell_spec, dsub, dataset_name, show_legend=False):
     inner = cell_spec.subgridspec(2, 1, height_ratios=[3.0, 1.2], hspace=0.02)
     ax_top = fig.add_subplot(inner[0])
-    ax_bot = fig.add_subplot(inner[1], sharex=ax_top)
+    ax_bottom = fig.add_subplot(inner[1], sharex=ax_top)
 
     if dsub.empty:
-        draw_empty_panel(ax_top, f'{dataset_name}: cost, FDP, power', 'No data')
-        draw_empty_panel(ax_bot, '', '')
-        return ax_top, ax_bot, None
+        draw_empty_panel(ax_top, f"{dataset_name}: cost, FDP, power", "No data")
+        draw_empty_panel(ax_bottom, "", "")
+        return ax_top, ax_bottom, None
 
     x = np.arange(len(dsub))
-    xticklabels = [format_param_label(v) for v in dsub[eta_col].to_numpy()]
+    eta_values = dsub["eta"].to_numpy(dtype=float)
 
-    cost = dsub['mean_average_cost'].to_numpy(dtype=float)
-    power = dsub['mean_power'].to_numpy(dtype=float)
-    fdr = dsub['mean_fdr'].to_numpy(dtype=float)
+    cost = dsub["mean_average_cost"].to_numpy(dtype=float)
+    power = dsub["mean_power"].to_numpy(dtype=float)
+    fdp = dsub["mean_fdr"].to_numpy(dtype=float)
 
-    # Top: average cost bars.
     ax_top.bar(x, cost, width=0.50, color=COST_COLOR, alpha=0.85, zorder=2)
-    ax_top.set_title(f'{dataset_name}: cost, FDP, power', fontsize=TITLE_SIZE, pad=4)
+    ax_top.set_title(f"{dataset_name}: cost, FDP, power", fontsize=TITLE_SIZE, pad=4)
     ax_top.set_ylim(0, nice_upper_bound(np.nanmax(cost), default=1.0))
     ax_top.yaxis.set_major_locator(MaxNLocator(nbins=3))
-    ax_top.set_ylabel('Cost')
+    ax_top.set_ylabel("Cost")
 
-    # FDR on right axis.
-    ax_fdr = ax_top.twinx()
-    ax_fdr.plot(x, fdr, color=FDR_COLOR, marker='o', linewidth=1.0, markersize=2.8, zorder=3)
-    upper_fdr = max(0.10, nice_upper_bound(np.nanmax(fdr), default=0.10))
-    ax_fdr.set_ylim(0, upper_fdr)
-    ax_fdr.yaxis.set_major_locator(MaxNLocator(nbins=3))
-    ax_fdr.yaxis.set_major_formatter(FuncFormatter(lambda y, pos: f'{y:.2f}'))
-    ax_fdr.tick_params(axis='y', labelsize=TICK_LABEL_SIZE, colors=FDR_COLOR, length=2.0)
-    ax_fdr.set_ylabel('FDP', color=FDR_COLOR)
-    normalize_axis_text(ax_fdr)
+    ax_fdp = ax_top.twinx()
+    ax_fdp.plot(x, fdp, color=FDP_COLOR, marker="o", linewidth=1.0, markersize=2.8, zorder=3)
+    ax_fdp.set_ylim(0, max(0.10, nice_upper_bound(np.nanmax(fdp), default=0.10)))
+    ax_fdp.yaxis.set_major_locator(MaxNLocator(nbins=3))
+    ax_fdp.yaxis.set_major_formatter(FuncFormatter(lambda y, pos: f"{y:.2f}"))
+    ax_fdp.tick_params(axis="y", labelsize=TICK_LABEL_SIZE, colors=FDP_COLOR, length=2.0)
+    ax_fdp.set_ylabel("FDP", color=FDP_COLOR)
+    normalize_axis_text(ax_fdp)
 
-    # Bottom: power bars, inverted as in the original script.
-    ax_bot.bar(x, power, width=0.50, color=POWER_COLOR, alpha=0.85, zorder=2)
-    pmax = max(0.05, nice_upper_bound(np.nanmax(power), default=1.0))
-    ax_bot.set_ylim(0, pmax)
-    ax_bot.invert_yaxis()
-    ax_bot.yaxis.set_major_locator(MaxNLocator(nbins=3))
-    ax_bot.yaxis.set_major_formatter(FuncFormatter(lambda y, pos: '' if np.isclose(y, 0) else f'{y:g}'))
-    ax_bot.set_ylabel('Power')
+    ax_bottom.bar(x, power, width=0.50, color=POWER_COLOR, alpha=0.85, zorder=2)
+    ax_bottom.set_ylim(0, max(0.05, nice_upper_bound(np.nanmax(power), default=1.0)))
+    ax_bottom.invert_yaxis()
+    ax_bottom.yaxis.set_major_locator(MaxNLocator(nbins=3))
+    ax_bottom.yaxis.set_major_formatter(FuncFormatter(lambda y, pos: "" if np.isclose(y, 0) else f"{y:g}"))
+    ax_bottom.set_ylabel("Power")
+    ax_bottom.set_xlabel(r"$\eta$")
 
-    ax_bot.set_xticks(x)
-    ax_bot.set_xticklabels(xticklabels, rotation=45, ha='right')
-    ax_bot.set_xlabel(eta_label if show_xlabel else '')
+    set_eta_ticks(ax_bottom, x, eta_values)
 
     style_ax(ax_top)
-    style_ax(ax_bot)
-    ax_top.spines['bottom'].set_visible(False)
-    ax_bot.spines['top'].set_visible(False)
-    ax_top.tick_params(axis='x', bottom=False, labelbottom=False)
-    ax_bot.tick_params(axis='x', top=False)
+    style_ax(ax_bottom)
+    ax_top.spines["bottom"].set_visible(False)
+    ax_bottom.spines["top"].set_visible(False)
+    ax_top.tick_params(axis="x", bottom=False, labelbottom=False)
+    ax_bottom.tick_params(axis="x", top=False)
 
-    # Put the first-panel legend below the first split panel instead of
-    # inside the plot area or below the whole figure.  For multi-row
-    # figures, this is shown only for the last row so the legend is not
-    # repeated for every dataset.
     if show_legend:
-        legend = ax_bot.legend(
+        legend = ax_bottom.legend(
             handles=first_panel_legend_handles(),
-            loc='upper center',
+            loc="upper center",
             bbox_to_anchor=(0.5, -1.18),
             ncol=3,
             frameon=True,
@@ -389,64 +356,47 @@ def plot_power_cost_hist_cell(fig, cell_spec, dsub, eta_col, eta_label, dataset_
         )
         normalize_legend_text(legend)
 
-    return ax_top, ax_bot, ax_fdr
+    return ax_top, ax_bottom, ax_fdp
 
 
-def first_panel_legend_handles():
-    return [
-        Line2D([0], [0], color=COST_COLOR, linewidth=7, alpha=0.85, label='Average cost'),
-        Line2D([0], [0], color=POWER_COLOR, linewidth=7, alpha=0.85, label='Power'),
-        Line2D([0], [0], color=FDR_COLOR, marker='o', linewidth=1.0, markersize=4, label='FDP'),
-    ]
-
-
-# ============================================================
-# Panel 2: delta metrics relative to eta = 0
-# ============================================================
-def plot_delta_metrics(ax, dsub, eta_col, eta_label, dataset_name, show_xlabel=True, show_legend=False):
-    base = get_base_row(dsub, eta_col)
+def plot_delta_metrics(ax, dsub, dataset_name, show_legend=False):
+    base = get_base_row(dsub)
     if base is None:
-        draw_empty_panel(ax, f'{dataset_name}: delta metrics', r'No $\eta=0$')
+        draw_empty_panel(ax, f"{dataset_name}: delta metrics", r"No $\eta=0$")
         return
 
-    eta = dsub[eta_col].to_numpy(dtype=float)
-    # Use evenly spaced plotting positions.  The eta grid is nonuniform
-    # (0, 0.25, 0.5, 1, 2, ..., 10), so plotting against the raw eta
-    # values makes the first several tick labels overlap.
-    x = np.arange(len(eta))
+    eta_values = dsub["eta"].to_numpy(dtype=float)
+    x = np.arange(len(eta_values))
 
-    cost = dsub['mean_average_cost'].to_numpy(dtype=float)
-    power = dsub['mean_power'].to_numpy(dtype=float)
-    fdr = dsub['mean_fdr'].to_numpy(dtype=float)
+    cost = dsub["mean_average_cost"].to_numpy(dtype=float)
+    power = dsub["mean_power"].to_numpy(dtype=float)
+    fdp = dsub["mean_fdr"].to_numpy(dtype=float)
 
-    cost0 = float(base['mean_average_cost'])
-    power0 = float(base['mean_power'])
-    fdr0 = float(base['mean_fdr'])
+    cost0 = float(base["mean_average_cost"])
+    power0 = float(base["mean_power"])
+    fdp0 = float(base["mean_fdr"])
 
-    if cost0 > 0:
-        delta_cost_reduction_pct = 100.0 * (cost0 - cost) / cost0
-    else:
-        delta_cost_reduction_pct = np.zeros_like(cost)
-
+    delta_cost_reduction_pct = 100.0 * (cost0 - cost) / cost0 if cost0 > 0 else np.zeros_like(cost)
     delta_power_pp = 100.0 * (power - power0)
-    delta_fdr_pp = 100.0 * (fdr - fdr0)
+    delta_fdp_pp = 100.0 * (fdp - fdp0)
 
-    ax.axhline(0.0, color=ZERO_COLOR, linewidth=0.9, linestyle='--', alpha=0.8)
-    ax.plot(x, delta_cost_reduction_pct, color=COST_COLOR, marker='o', linewidth=1.35, markersize=4.0, label='Cost reduction (%)')
-    ax.plot(x, delta_power_pp, color=POWER_COLOR, marker='s', linewidth=1.35, markersize=4.0, label=r'$\Delta$Power (pp)')
-    ax.plot(x, delta_fdr_pp, color=FDR_COLOR, marker='^', linewidth=1.35, markersize=4.0, label=r'$\Delta$FDP (pp)')
+    ax.axhline(0.0, color=ZERO_COLOR, linewidth=0.9, linestyle="--", alpha=0.8)
+    ax.plot(x, delta_cost_reduction_pct, color=COST_COLOR, marker="o", linewidth=1.35, markersize=4.0, label="Cost reduction (%)")
+    ax.plot(x, delta_power_pp, color=POWER_COLOR, marker="s", linewidth=1.35, markersize=4.0, label=r"$\Delta$Power (pp)")
+    ax.plot(x, delta_fdp_pp, color=FDP_COLOR, marker="^", linewidth=1.35, markersize=4.0, label=r"$\Delta$FDP (pp)")
 
-    ymin, ymax = nice_limit_from_values(np.r_[delta_cost_reduction_pct, delta_power_pp, delta_fdr_pp], default=5.0)
+    ymin, ymax = nice_limit_from_values(np.r_[delta_cost_reduction_pct, delta_power_pp, delta_fdp_pp], default=5.0)
     ax.set_ylim(ymin, ymax)
     ax.yaxis.set_major_locator(MaxNLocator(nbins=5))
-    ax.set_title(f'{dataset_name}: delta metrics', fontsize=TITLE_SIZE, pad=4)
-    ax.set_ylabel(r'Difference from $\eta=0$')
-    ax.set_xlabel(eta_label if show_xlabel else '')
-    set_eta_ticks(ax, x, eta)
+    ax.set_title(f"{dataset_name}: delta metrics", fontsize=TITLE_SIZE, pad=4)
+    ax.set_ylabel(r"Difference from $\eta=0$")
+    ax.set_xlabel(r"$\eta$")
+    set_eta_ticks(ax, x, eta_values)
     style_ax(ax)
+
     if show_legend:
         legend = ax.legend(
-            loc='upper center',
+            loc="upper center",
             bbox_to_anchor=(0.5, -0.32),
             ncol=3,
             frameon=True,
@@ -458,43 +408,36 @@ def plot_delta_metrics(ax, dsub, eta_col, eta_label, dataset_name, show_xlabel=T
         normalize_legend_text(legend)
 
 
-# ============================================================
-# Panel 3: delta selected-region counts relative to eta = 0
-# ============================================================
-def plot_delta_selected_counts(ax, dsub, eta_col, eta_label, dataset_name, show_xlabel=True, show_legend=False):
-    base = get_base_row(dsub, eta_col)
+def plot_delta_selected_counts(ax, dsub, dataset_name, show_legend=False):
+    base = get_base_row(dsub)
     if base is None:
-        draw_empty_panel(ax, f'{dataset_name}: selected-count changes', r'No $\eta=0$')
+        draw_empty_panel(ax, f"{dataset_name}: selected-count changes", r"No $\eta=0$")
         return
 
-    eta = dsub[eta_col].to_numpy(dtype=float)
-    # Use evenly spaced plotting positions for the nonuniform eta grid.
-    x = np.arange(len(eta))
+    eta_values = dsub["eta"].to_numpy(dtype=float)
+    x = np.arange(len(eta_values))
 
-    fail = dsub['mean_n_selected_fail'].to_numpy(dtype=float)
-    ind = dsub['mean_n_selected_ind'].to_numpy(dtype=float)
-    passed = dsub['mean_n_selected_pass'].to_numpy(dtype=float)
+    delta_fail = dsub["mean_n_selected_fail"].to_numpy(dtype=float) - float(base["mean_n_selected_fail"])
+    delta_ind = dsub["mean_n_selected_ind"].to_numpy(dtype=float) - float(base["mean_n_selected_ind"])
+    delta_pass = dsub["mean_n_selected_pass"].to_numpy(dtype=float) - float(base["mean_n_selected_pass"])
 
-    delta_fail = fail - float(base['mean_n_selected_fail'])
-    delta_ind = ind - float(base['mean_n_selected_ind'])
-    delta_pass = passed - float(base['mean_n_selected_pass'])
-
-    ax.axhline(0.0, color=ZERO_COLOR, linewidth=0.9, linestyle='--', alpha=0.8)
-    ax.plot(x, delta_fail, color=FAIL_COLOR, marker='o', linewidth=1.35, markersize=4.0, label=r'$\Delta n_{\mathrm{fail}}$')
-    ax.plot(x, delta_ind, color=IND_COLOR, marker='s', linewidth=1.35, markersize=4.0, label=r'$\Delta n_{\mathrm{ind}}$')
-    ax.plot(x, delta_pass, color=PASS_COLOR, marker='^', linewidth=1.35, markersize=4.0, label=r'$\Delta n_{\mathrm{pass}}$')
+    ax.axhline(0.0, color=ZERO_COLOR, linewidth=0.9, linestyle="--", alpha=0.8)
+    ax.plot(x, delta_fail, color=FAIL_COLOR, marker="o", linewidth=1.35, markersize=4.0, label=r"$\Delta n_{\mathrm{fail}}$")
+    ax.plot(x, delta_ind, color=IND_COLOR, marker="s", linewidth=1.35, markersize=4.0, label=r"$\Delta n_{\mathrm{ind}}$")
+    ax.plot(x, delta_pass, color=PASS_COLOR, marker="^", linewidth=1.35, markersize=4.0, label=r"$\Delta n_{\mathrm{pass}}$")
 
     ymin, ymax = nice_limit_from_values(np.r_[delta_fail, delta_ind, delta_pass], default=10.0)
     ax.set_ylim(ymin, ymax)
     ax.yaxis.set_major_locator(MaxNLocator(nbins=5))
-    ax.set_title(f'{dataset_name}: selected-count changes', fontsize=TITLE_SIZE, pad=4)
-    ax.set_ylabel(r'Change in mean selected count')
-    ax.set_xlabel(eta_label if show_xlabel else '')
-    set_eta_ticks(ax, x, eta)
+    ax.set_title(f"{dataset_name}: selected-count changes", fontsize=TITLE_SIZE, pad=4)
+    ax.set_ylabel("Change in mean selected count")
+    ax.set_xlabel(r"$\eta$")
+    set_eta_ticks(ax, x, eta_values)
     style_ax(ax)
+
     if show_legend:
         legend = ax.legend(
-            loc='upper center',
+            loc="upper center",
             bbox_to_anchor=(0.5, -0.32),
             ncol=3,
             frameon=True,
@@ -506,145 +449,118 @@ def plot_delta_selected_counts(ax, dsub, eta_col, eta_label, dataset_name, show_
         normalize_legend_text(legend)
 
 
-# ============================================================
-# Row figure
-# ============================================================
-def make_three_panel_rows_figure(dataset_list, sample, q_value, method, result_dir, out_dir, eta_grid, strict=False, file_format='pdf', dpi=300):
+def make_three_panel_rows_figure(dataset_list, sample, q_value, method, result_dir, out_dir, n_itr, seed_start, eta_grid, strict=False, file_format="pdf", dpi=300):
     nrows = len(dataset_list)
-    ncols = 3
-
     if nrows <= 0:
-        raise ValueError('At least one dataset must be provided.')
+        raise ValueError("At least one dataset must be provided.")
 
-    # Large enough for 15 datasets, but not too large for a single dataset.
-    # The first column contains a split panel, so a slightly taller row
-    # prevents titles, x tick labels, and the global legend from colliding.
-    row_height = 5.15
-    fig_height = max(6.90, row_height * nrows)
+    row_height = 6
+    fig_height = max(6.2, row_height * nrows)
     fig_width = 22.0
+
     fig = plt.figure(figsize=(fig_width, fig_height))
-    outer = fig.add_gridspec(nrows, ncols, wspace=0.36, hspace=0.48)
+    outer = fig.add_gridspec(nrows, 3, wspace=0.36, hspace=0.48)
 
     for row, dataset_name in enumerate(dataset_list):
-        df = load_dataset_summary(result_dir, dataset_name, sample, strict=strict)
-        dsub, eta_col, eta_label = get_method_q_data(df, method, q_value, eta_grid)
-
-        if dsub.empty:
-            plot_power_cost_hist_cell(fig, outer[row, 0], pd.DataFrame(), None, r'$\eta$', dataset_name, q_value, show_xlabel=True, show_legend=(row == nrows - 1))
-            ax_delta = fig.add_subplot(outer[row, 1])
-            ax_counts = fig.add_subplot(outer[row, 2])
-            draw_empty_panel(ax_delta, f'{dataset_name}: delta metrics', 'No data')
-            draw_empty_panel(ax_counts, f'{dataset_name}: selected-count changes', 'No data')
-            continue
+        df = aggregate_seed_summaries(result_dir, dataset_name, sample, n_itr, seed_start, eta_grid, strict)
+        dsub = get_method_q_data(df, method, q_value)
 
         plot_power_cost_hist_cell(
-            fig, outer[row, 0], dsub, eta_col, eta_label, dataset_name, q_value,
-            show_xlabel=True,
-            show_legend=(row == nrows - 1)
+            fig,
+            outer[row, 0],
+            dsub,
+            dataset_name,
+            show_legend=(row == nrows - 1),
         )
 
         ax_delta = fig.add_subplot(outer[row, 1])
         ax_counts = fig.add_subplot(outer[row, 2])
-        plot_delta_metrics(
-            ax_delta, dsub, eta_col, eta_label, dataset_name,
-            show_xlabel=True,
-            show_legend=(row == nrows - 1)
-        )
-        plot_delta_selected_counts(
-            ax_counts, dsub, eta_col, eta_label, dataset_name,
-            show_xlabel=True,
-            show_legend=(row == nrows - 1)
-        )
+
+        if dsub.empty:
+            draw_empty_panel(ax_delta, f"{dataset_name}: delta metrics", "No data")
+            draw_empty_panel(ax_counts, f"{dataset_name}: selected-count changes", "No data")
+            continue
+
+        plot_delta_metrics(ax_delta, dsub, dataset_name, show_legend=(row == nrows - 1))
+        plot_delta_selected_counts(ax_counts, dsub, dataset_name, show_legend=(row == nrows - 1))
 
     method_tag = method_to_tag(method)
     q_tag = q_to_tag(q_value)
-    dataset_tag = 'all' if len(dataset_list) == len(ALL_DATASETS) else '_'.join(dataset_list)
-    dataset_tag = dataset_tag.replace('/', '-').replace(' ', '_')
+    dataset_tag = "_".join(dataset_list).replace("/", "-").replace(" ", "_")
 
-    # Use margins measured in inches.  The figure-level title is intentionally
-    # omitted for paper-style figures; the caption should carry the full title.
-    # Only the three panel titles are retained inside the figure.
     top_margin_in = 1.05
     bottom_margin_in = 2.25
-    top_frac = 1.0 - top_margin_in / fig_height
-    bottom_frac = bottom_margin_in / fig_height
-
     fig.subplots_adjust(
         left=0.055,
         right=0.965,
-        top=top_frac,
-        bottom=bottom_frac,
+        top=1.0 - top_margin_in / fig_height,
+        bottom=bottom_margin_in / fig_height,
         hspace=0.68,
         wspace=0.46,
     )
 
-    filename = f'{method_tag}_{dataset_tag}_three_panel_rows_{q_tag}.{file_format}'
+    filename = f"{method_tag}_{dataset_tag}_three_panel_rows_{q_tag}.{file_format}"
     save_path = os.path.join(out_dir, filename)
-    plt.savefig(save_path, dpi=dpi, facecolor='white')
+    plt.savefig(save_path, dpi=dpi, facecolor="white")
     plt.close(fig)
-    print(f'[Saved] {save_path}')
+    print(f"[Saved] {save_path}")
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Plot representative three-panel cost-aware RSI figures.")
+    parser.add_argument("--n_itr", type=int, help="Number of seed files to average, as in plot-settingI.py.")
+    parser.add_argument("--sample", type=float, default=1.0)
+    parser.add_argument("--seed_start", type=int, default=1)
+    parser.add_argument("--result_dir", type=str, default="result-cost")
+    parser.add_argument("--output_dir", type=str, default="figure-cost-three-panel")
+    parser.add_argument("--datasets", type=str, nargs="+", default=REPRESENTATIVE_DATASETS)
+    parser.add_argument("--q_values", type=float, nargs="+", default=[0.2])
+    parser.add_argument("--methods", type=str, nargs="+", default=["RSI-EC", "RSI-CS"], choices=["RSI-EC", "RSI-CS"])
+    parser.add_argument("--eta_grid", type=str, default="all", help="Comma-separated eta values to keep. Default: all values found.")
+    parser.add_argument("--file_format", type=str, default="pdf", choices=["pdf", "png", "svg"])
+    parser.add_argument("--dpi", type=int, default=300)
+    parser.add_argument("--strict", action="store_true")
+    return parser.parse_args()
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('sample', type=float, help='Sample ratio, e.g. 0.10 or 1.00')
-    parser.add_argument('--result_dir', type=str, default='result-cost-0513',
-                        help='Directory containing per-dataset aggregated_over_seeds.csv files')
-    parser.add_argument('--output_dir', type=str, default='figure-cost-0518raw-three-panel',
-                        help='Directory to save generated figures')
-    parser.add_argument('--datasets', type=str, nargs='+', default=ALL_DATASETS,
-                        help='Datasets to plot. Default: all 15 QSAR datasets')
-    parser.add_argument('--q_values', type=float, nargs='+', default=[0.2],
-                        help='Nominal FDP levels to plot. Default: 0.2')
-    parser.add_argument('--methods', type=str, nargs='+', default=['RSI-EC', 'RSI-CS'],
-                        choices=['RSI-EC', 'RSI-CS'],
-                        help='Methods to plot. Default: RSI-EC RSI-CS')
-    # parser.add_argument('--eta_grid', type=str,
-    #                     default='0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0',
-    #                     help='Comma-separated eta grid. Default: 0,0.25,0.5,1,2,...,10')
-    parser.add_argument('--eta_grid', type=str,
-                        default='0,0.25,0.5,1,2,3,4,5,6,7,8,9,10',
-                        help='Comma-separated eta grid. Default: 0,0.25,0.5,1,2,...,10')
-    parser.add_argument('--file_format', type=str, default='pdf', choices=['pdf', 'png', 'svg'],
-                        help='Output format. Default: pdf')
-    parser.add_argument('--dpi', type=int, default=300,
-                        help='DPI for saved figures. Default: 300')
-    parser.add_argument('--strict', action='store_true',
-                        help='Raise an error if any dataset file is missing or invalid. Default: draw missing panels.')
-    args = parser.parse_args()
-
-    sample = args.sample
+    args = parse_args()
     eta_grid = parse_eta_grid(args.eta_grid)
 
-    out_dir = os.path.join(args.output_dir, f'sample_{sample:.2f}')
+    out_dir = os.path.join(args.output_dir, f"sample_{args.sample:.2f}")
     os.makedirs(out_dir, exist_ok=True)
 
-    print('[Info] script_version:', SCRIPT_VERSION)
-    print('[Info] result_dir:', args.result_dir)
-    print('[Info] output_dir:', out_dir)
-    print('[Info] datasets:', args.datasets)
-    print('[Info] q_values:', args.q_values)
-    print('[Info] methods:', args.methods)
-    print('[Info] eta_grid:', eta_grid.tolist())
-    print('[Info] file_format:', args.file_format)
+    print("[Info] script_version:", SCRIPT_VERSION)
+    print("[Info] result_dir:", args.result_dir)
+    print("[Info] output_dir:", out_dir)
+    print("[Info] n_itr:", args.n_itr)
+    print("[Info] seed_start:", args.seed_start)
+    print("[Info] sample:", args.sample)
+    print("[Info] datasets:", args.datasets)
+    print("[Info] q_values:", args.q_values)
+    print("[Info] methods:", args.methods)
+    print("[Info] eta_grid:", "all" if eta_grid is None else eta_grid.tolist())
+    print("[Info] file_format:", args.file_format)
 
-    for q in args.q_values:
+    for q_value in args.q_values:
         for method in args.methods:
             make_three_panel_rows_figure(
                 dataset_list=args.datasets,
-                sample=sample,
-                q_value=q,
+                sample=args.sample,
+                q_value=q_value,
                 method=method,
                 result_dir=args.result_dir,
                 out_dir=out_dir,
+                n_itr=args.n_itr,
+                seed_start=args.seed_start,
                 eta_grid=eta_grid,
                 strict=args.strict,
                 file_format=args.file_format,
                 dpi=args.dpi,
             )
 
-    print('All figures saved to:', out_dir)
+    print("All figures saved to:", out_dir)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

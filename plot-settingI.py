@@ -1,395 +1,200 @@
 import pandas as pd
-import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib.ticker import FormatStrFormatter
 import os
-import seaborn as sns
 import argparse
 
-# Set ggplot style for the plots
+# ---------- style ----------
+BRIGHT_BLUE = '#4C9EF1'
+BRIGHT_GREEN = '#5CBF60'
+BRIGHT_RED = '#E85B5B'
+LIGHT_GRAY = '#D9D9D9'
+NOMINAL_FDP_TICKS = [0,0.2,0.4,0.6,0.8,1.0]
+
+plt.style.use('default')
+plt.rcParams.update({
+    'figure.facecolor': 'white',
+    'axes.facecolor': 'white',
+    'savefig.facecolor': 'white',
+    'axes.edgecolor': '#666666',
+    'axes.labelsize': 22,
+    'axes.titlesize': 24,
+    'xtick.labelsize': 18,
+    'ytick.labelsize': 18,
+    'grid.color': LIGHT_GRAY,
+    'grid.alpha': 0.8,
+    'grid.linestyle': '-',
+})
+
+dataset_list = [
+    '3A4', 'CB1', 'DPP4', 'HIVINT', 'HIVPROT',
+    'LOGD', 'METAB', 'NK1', 'OX1', 'OX2',
+    'PGP', 'PPB', 'RAT_F', 'TDI', 'THROMBIN'
+]
+
 parser = argparse.ArgumentParser()
-# parser.add_argument('sample', type=float)
 parser.add_argument('seed', type=int)
 args = parser.parse_args()
-
-sample = 1.0
 n_itr = args.seed
-plt.style.use('ggplot')
-
-df_list = []
-dataset_list = ['3A4', 'CB1', 'DPP4', 'HIVINT', 'HIVPROT', 'LOGD', 'METAB', 'NK1', 'OX1', 'OX2', 'PGP', 'PPB', 'RAT_F',
-                'TDI', 'THROMBIN']
-
-for name in dataset_list:
-    df_ones = []
-    for j in range(1, 1 + n_itr):
-        df = pd.read_csv(
-            os.path.join("result-inter", f"{name} {sample:.2f}", f"{name} {sample:.2f} {j}.csv"))
-        df_ones.append(df)
-    df = pd.concat(df_ones).groupby("fdp_nominals", as_index=False).mean()
-    df_list.append(df)
-
-out_dir = os.path.join('figure-settingI')
-
-if not os.path.exists(out_dir):
-    os.makedirs(out_dir)
-
-'''comparison'''
-# four method
-# Create a grid for subplots
-fig, axs = plt.subplots(nrows=3, ncols=5, figsize=(18, 12))
-axs = axs.flatten()
-
-# Loop through datasets and plot the data on each subplot
-for i, name in enumerate(dataset_list):
-    ax = axs[i]
-
-    if i == 0:
-        # Plot data for each model and conformal method
-        line1, = ax.plot(df_list[i]['fdp_nominals'], df_list[i]['fdpn_cs2inter'],
-                         label='Baseline Conformal', marker='o', color='red', alpha=0.8)
-
-        # line2, = ax.plot(df_list[i]['fdp_nominals'], df_list[i]['fdpn_cs2inter'],
-        #                  label='Two-stage Conformal Inter: FDP', marker='o', color='red', alpha=0.8)
-
-        line2, = ax.plot(df_list[i]['fdp_nominals'], df_list[i]['fdpn_cs'],
-                         label='RSI Conformal', marker='o', color='darkgreen', alpha=0.8)
-
-        line3, = ax.plot(df_list[i]['fdp_nominals'], df_list[i]['fdpn_sh'],
-                         label='RSI Sheridan', marker='o', color='steelblue', alpha=0.8)
-
-        ax.legend(loc='best', bbox_to_anchor=(4.9, -3.1), frameon=True, shadow=False, ncol=3, fontsize=22)
-    else:
-        ax.plot(df_list[i]['fdp_nominals'], df_list[i]['fdpn_cs2inter'],
-                label='Baseline Conformal', marker='o', color='red', alpha=0.8)
-
-        # ax.plot(df_list[i]['fdp_nominals'], df_list[i]['fdpn_cs2inter'],
-        #         label='Two-stage Conformal Inter: FDP', marker='o', color='red', alpha=0.8)
-
-        ax.plot(df_list[i]['fdp_nominals'], df_list[i]['fdpn_cs'],
-                label='RSI Conformal', marker='o', color='darkgreen', alpha=0.8)
-
-        ax.plot(df_list[i]['fdp_nominals'], df_list[i]['fdpn_sh'],
-                label='RSI Sheridan', marker='o', color='steelblue', alpha=0.8)
-
-    # Set axis labels
-    ax.plot([0.05, 0.55], [0.05, 0.55], color='grey', alpha=0.7, linestyle='-.')
-    ax.set_title(f'{name}', fontsize=22)
-
-    # Add grid lines
-    ax.grid(True)
-
-# Adjust spacing between subplots
-fig.subplots_adjust(wspace=0.2, hspace=0.3, top=0.92, bottom=0.2, left=0.07, right=0.96)
-
-# Add global x and y labels, move them slightly outward
-fig.text(0.5, 0.13, 'Nominal FDP', ha='center', fontsize=22)  # Moved down slightly
-fig.text(0.03, 0.5, 'Observed FDP', va='center', rotation='vertical', fontsize=22)  # Moved left slightly
-
-# Title for the entire plot
-# fig.suptitle("Comparison: FDP control for all 15 Datasets", fontsize=16)
-# Display the plot
-plt.savefig(os.path.join("figure-settingI", "compfdpI.png"))
-# plt.show()
-
-####power
-# four method
-# Create a grid for subplots
-fig, axs = plt.subplots(nrows=3, ncols=5, figsize=(18, 12))
-axs = axs.flatten()
-# Loop through datasets and plot the data on each subplot
-for i, name in enumerate(dataset_list):
-    ax = axs[i]
-
-    if i == 0:
-        # Plot data for each model and conformal method
-        line1, = ax.plot(df_list[i]['fdpn_cs2inter'], df_list[i]['powern_cs2inter'],
-                         label='Baseline Conformal', marker='o', color='red', alpha=0.8)
-
-        # line2, = ax.plot(df_list[i]['fdpn_cs2inter'], df_list[i]['powern_cs2inter'],
-        #                  label='Two-stage Conformal Inter: Power', marker='o', color='red', alpha=0.8)
-
-        line2, = ax.plot(df_list[i]['fdpn_cs'], df_list[i]['powern_cs'],
-                         label='RSI Conformal', marker='o', color='darkgreen', alpha=0.8)
-
-        line3, = ax.plot(df_list[i]['fdpn_sh'], df_list[i]['powern_sh'],
-                         label='RSI Sheridan', marker='o', color='steelblue', alpha=0.8)
-
-        ax.legend(loc='best', bbox_to_anchor=(4.9, -3.1), frameon=True, shadow=False, ncol=3, fontsize=22)
-    else:
-        ax.plot(df_list[i]['fdpn_cs2inter'], df_list[i]['powern_cs2inter'],
-                label='Baseline Conformal', marker='o', color='red', alpha=0.8)
-        # ax.plot(df_list[i]['fdpn_cs2inter'], df_list[i]['powern_cs2inter'],
-        #         label='Two-stage Conformal Inter: Power', marker='o', color='red', alpha=0.8)
-        ax.plot(df_list[i]['fdpn_cs'], df_list[i]['powern_cs'],
-                label='RSI Conformal', marker='o', color='darkgreen', alpha=0.8)
-        ax.plot(df_list[i]['fdpn_sh'], df_list[i]['powern_sh'],
-                label='RSI Sheridan', marker='o', color='steelblue', alpha=0.8)
-
-    # Set axis labels
-    ax.set_title(f'{name}', fontsize=22)
-
-    # Add grid lines
-    ax.grid(True)
-
-# Adjust spacing between subplots
-fig.subplots_adjust(wspace=0.2, hspace=0.3, top=0.92, bottom=0.2, left=0.07, right=0.96)
-
-# Add global x and y labels, move them slightly outward
-fig.text(0.5, 0.13, 'Observed FDP', ha='center', fontsize=22)  # Moved down slightly
-fig.text(0.03, 0.5, 'Observed Power', va='center', rotation='vertical', fontsize=22)  # Moved left slightly
-
-# Title for the entire plot
-# fig.suptitle("Comparison: Power for all 15 Datasets", fontsize=16)
-
-# Display the plot
-plt.savefig(os.path.join("figure-settingI", "comppowerobI.png"))
-# plt.show()
-
-
-### ob fdp + power 4
-# Create a grid for subplots
-fig, axs = plt.subplots(nrows=3, ncols=5, figsize=(18, 12))
-axs = axs.flatten()
-# Loop through datasets and plot the data on each subplot
-for i, name in enumerate(dataset_list):
-    ax = axs[i]
-
-    if i == 0:
-        # Plot data for each model and conformal method
-        line1, = ax.plot(df_list[i]['fdp_nominals'], df_list[i]['powern_cs2inter'],
-                         label='Baseline Conformal', marker='o', color='red', alpha=0.8)
-
-        # line2, = ax.plot(df_list[i]['fdp_nominals'], df_list[i]['powern_cs2inter'],
-        #                  label='Two-stage Conformal Inter: Power', marker='o', color='red', alpha=0.8)
-
-        line2, = ax.plot(df_list[i]['fdp_nominals'], df_list[i]['powern_cs'],
-                         label='RSI Conformal', marker='o', color='darkgreen', alpha=0.8)
-
-        line3, = ax.plot(df_list[i]['fdp_nominals'], df_list[i]['powern_sh'],
-                         label='RSI Sheridan', marker='o', color='steelblue', alpha=0.8)
-
-        ax.legend(loc='best', bbox_to_anchor=(4.9, -3.1), frameon=True, shadow=False, ncol=3, fontsize=22)
-    else:
-        ax.plot(df_list[i]['fdp_nominals'], df_list[i]['powern_cs2inter'],
-                label='Baseline Conformal', marker='o', color='red', alpha=0.8)
-        # ax.plot(df_list[i]['fdp_nominals'], df_list[i]['powern_cs2inter'],
-        #         label='Two-stage Conformal Inter: Power', marker='o', color='red', alpha=0.8)
-        ax.plot(df_list[i]['fdp_nominals'], df_list[i]['powern_cs'],
-                label='RSI Conformal', marker='o', color='darkgreen', alpha=0.8)
-        ax.plot(df_list[i]['fdp_nominals'], df_list[i]['powern_sh'],
-                label='RSI Sheridan', marker='o', color='steelblue', alpha=0.8)
 
-    # Set axis labels
-    ax.set_title(f'{name}', fontsize=22)
-
-    # Add grid lines
-    ax.grid(True)
-
-# Adjust spacing between subplots
-fig.subplots_adjust(wspace=0.2, hspace=0.3, top=0.92, bottom=0.2, left=0.07, right=0.96)
-
-# Add global x and y labels, move them slightly outward
-fig.text(0.5, 0.13, 'Nominal FDP', ha='center', fontsize=22)  # Moved down slightly
-fig.text(0.03, 0.5, 'Observed Power', va='center', rotation='vertical', fontsize=22)  # Moved left slightly
-
-# Title for the entire plot
-# fig.suptitle("Comparison: Power for all 15 Datasets", fontsize=16)
-
-# Display the plot
-plt.savefig(os.path.join("figure-settingI", "comppowerI.png"))
-# plt.show()
-
-
-#######################0.1dataset########################
-# Set ggplot style for the plots
-parser = argparse.ArgumentParser()
-# parser.add_argument('sample', type=float)
-parser.add_argument('seed', type=int)
-args = parser.parse_args()
-
-sample = 0.10
-n_itr = args.seed
-plt.style.use('ggplot')
-
-df_list = []
-dataset_list = ['3A4', 'CB1', 'DPP4', 'HIVINT', 'HIVPROT', 'LOGD', 'METAB', 'NK1', 'OX1', 'OX2', 'PGP', 'PPB', 'RAT_F',
-                'TDI', 'THROMBIN']
-
-for name in dataset_list:
-    df_ones = []
-    for j in range(1, 1 + n_itr):
-        df = pd.read_csv(
-            os.path.join("result-inter", f"{name} {sample:.2f}", f"{name} {sample:.2f} {j}.csv"))
-        df_ones.append(df)
-    df = pd.concat(df_ones).groupby("fdp_nominals", as_index=False).mean()
-    df_list.append(df)
-
-out_dir = os.path.join('figure-settingI')
-
-if not os.path.exists(out_dir):
-    os.makedirs(out_dir)
-
-'''comparison'''
-
-# four method
-# Create a grid for subplots
-fig, axs = plt.subplots(nrows=3, ncols=5, figsize=(18, 12))
-axs = axs.flatten()
-
-# Loop through datasets and plot the data on each subplot
-for i, name in enumerate(dataset_list):
-    ax = axs[i]
-
-    if i == 0:
-        # Plot data for each model and conformal method
-        line1, = ax.plot(df_list[i]['fdp_nominals'], df_list[i]['fdpn_cs2inter'],
-                         label='Baseline Conformal', marker='o', color='red', alpha=0.8)
-
-        # line2, = ax.plot(df_list[i]['fdp_nominals'], df_list[i]['fdpn_cs2inter'],
-        #                  label='Two-stage Conformal Inter: FDP', marker='o', color='red', alpha=0.8)
-
-        line2, = ax.plot(df_list[i]['fdp_nominals'], df_list[i]['fdpn_cs'],
-                         label='RSI Conformal', marker='o', color='darkgreen', alpha=0.8)
-
-        line3, = ax.plot(df_list[i]['fdp_nominals'], df_list[i]['fdpn_sh'],
-                         label='RSI Sheridan', marker='o', color='steelblue', alpha=0.8)
-
-        ax.legend(loc='best', bbox_to_anchor=(4.9, -3.1), frameon=True, shadow=False, ncol=3, fontsize=22)
-    else:
-        ax.plot(df_list[i]['fdp_nominals'], df_list[i]['fdpn_cs2inter'],
-                label='Baseline Conformal', marker='o', color='red', alpha=0.8)
-
-        # ax.plot(df_list[i]['fdp_nominals'], df_list[i]['fdpn_cs2inter'],
-        #         label='Two-stage Conformal Inter: FDP', marker='o', color='red', alpha=0.8)
-
-        ax.plot(df_list[i]['fdp_nominals'], df_list[i]['fdpn_cs'],
-                label='RSI Conformal', marker='o', color='darkgreen', alpha=0.8)
-
-        ax.plot(df_list[i]['fdp_nominals'], df_list[i]['fdpn_sh'],
-                label='RSI Sheridan', marker='o', color='steelblue', alpha=0.8)
-
-    # Set axis labels
-    ax.plot([0.05, 0.55], [0.05, 0.55], color='grey', alpha=0.7, linestyle='-.')
-    ax.set_title(f'{name}', fontsize=22)
-
-    # Add grid lines
-    ax.grid(True)
-
-# Adjust spacing between subplots
-fig.subplots_adjust(wspace=0.2, hspace=0.3, top=0.92, bottom=0.2, left=0.07, right=0.96)
-
-# Add global x and y labels, move them slightly outward
-fig.text(0.5, 0.13, 'Nominal FDP', ha='center', fontsize=22)  # Moved down slightly
-fig.text(0.03, 0.5, 'Observed FDP', va='center', rotation='vertical', fontsize=22)  # Moved left slightly
-
-# Title for the entire plot
-# fig.suptitle("Comparison: FDP control for all 15 Datasets", fontsize=16)
-# Display the plot
-plt.savefig(os.path.join("figure-settingI", "compfdpI0.1.png"))
-# plt.show()
-
-
-
-####power
-# four method
-# Create a grid for subplots
-fig, axs = plt.subplots(nrows=3, ncols=5, figsize=(18, 12))
-axs = axs.flatten()
-# Loop through datasets and plot the data on each subplot
-for i, name in enumerate(dataset_list):
-    ax = axs[i]
-
-    if i == 0:
-        # Plot data for each model and conformal method
-        line1, = ax.plot(df_list[i]['fdpn_cs2inter'], df_list[i]['powern_cs2inter'],
-                         label='Baseline Conformal', marker='o', color='red', alpha=0.8)
-
-        # line2, = ax.plot(df_list[i]['fdpn_cs2inter'], df_list[i]['powern_cs2inter'],
-        #                  label='Two-stage Conformal Inter: Power', marker='o', color='red', alpha=0.8)
-
-        line2, = ax.plot(df_list[i]['fdpn_cs'], df_list[i]['powern_cs'],
-                         label='RSI Conformal', marker='o', color='darkgreen', alpha=0.8)
-
-        line3, = ax.plot(df_list[i]['fdpn_sh'], df_list[i]['powern_sh'],
-                         label='RSI Sheridan', marker='o', color='steelblue', alpha=0.8)
-
-        ax.legend(loc='best', bbox_to_anchor=(4.9, -3.1), frameon=True, shadow=False, ncol=3, fontsize=22)
-    else:
-        ax.plot(df_list[i]['fdpn_cs2inter'], df_list[i]['powern_cs2inter'],
-                label='Baseline Conformal', marker='o', color='red', alpha=0.8)
-        # ax.plot(df_list[i]['fdpn_cs2inter'], df_list[i]['powern_cs2inter'],
-        #         label='Two-stage Conformal Inter: Power', marker='o', color='red', alpha=0.8)
-        ax.plot(df_list[i]['fdpn_cs'], df_list[i]['powern_cs'],
-                label='RSI Conformal', marker='o', color='darkgreen', alpha=0.8)
-        ax.plot(df_list[i]['fdpn_sh'], df_list[i]['powern_sh'],
-                label='RSI Sheridan', marker='o', color='steelblue', alpha=0.8)
-
-    # Set axis labels
-    ax.set_title(f'{name}', fontsize=22)
-
-    # Add grid lines
-    ax.grid(True)
-
-# Adjust spacing between subplots
-fig.subplots_adjust(wspace=0.2, hspace=0.3, top=0.92, bottom=0.2, left=0.07, right=0.96)
-
-# Add global x and y labels, move them slightly outward
-fig.text(0.5, 0.13, 'Observed FDP', ha='center', fontsize=22)  # Moved down slightly
-fig.text(0.03, 0.5, 'Observed Power', va='center', rotation='vertical', fontsize=22)  # Moved left slightly
-
-# Title for the entire plot
-# fig.suptitle("Comparison: Power for all 15 Datasets", fontsize=16)
-
-# Display the plot
-plt.savefig(os.path.join("figure-settingI", "comppowerobI0.1.png"))
-# plt.show()
-
-### ob fdp + power 4
-# Create a grid for subplots
-fig, axs = plt.subplots(nrows=3, ncols=5, figsize=(18, 12))
-axs = axs.flatten()
-# Loop through datasets and plot the data on each subplot
-for i, name in enumerate(dataset_list):
-    ax = axs[i]
-
-    if i == 0:
-        # Plot data for each model and conformal method
-        line1, = ax.plot(df_list[i]['fdp_nominals'], df_list[i]['powern_cs2inter'],
-                         label='Baseline Conformal', marker='o', color='red', alpha=0.8)
-
-        line2, = ax.plot(df_list[i]['fdp_nominals'], df_list[i]['powern_cs'],
-                         label='RSI Conformal', marker='o', color='darkgreen', alpha=0.8)
-
-        line3, = ax.plot(df_list[i]['fdp_nominals'], df_list[i]['powern_sh'],
-                         label='RSI Sheridan', marker='o', color='steelblue', alpha=0.8)
-
-        ax.legend(loc='best', bbox_to_anchor=(4.9, -3.1), frameon=True, shadow=False, ncol=3, fontsize=22)
-    else:
-        ax.plot(df_list[i]['fdp_nominals'], df_list[i]['powern_cs2inter'],
-                label='Baseline Conformal', marker='o', color='red', alpha=0.8)
-        # ax.plot(df_list[i]['fdp_nominals'], df_list[i]['powern_cs2inter'],
-        #         label='Two-stage Conformal Inter: Power', marker='o', color='red', alpha=0.8)
-        ax.plot(df_list[i]['fdp_nominals'], df_list[i]['powern_cs'],
-                label='RSI Conformal', marker='o', color='darkgreen', alpha=0.8)
-        ax.plot(df_list[i]['fdp_nominals'], df_list[i]['powern_sh'],
-                label='RSI Sheridan', marker='o', color='steelblue', alpha=0.8)
-
-    # Set axis labels
-    ax.set_title(f'{name}', fontsize=22)
-
-    # Add grid lines
-    ax.grid(True)
-
-# Adjust spacing between subplots
-fig.subplots_adjust(wspace=0.2, hspace=0.3, top=0.92, bottom=0.2, left=0.07, right=0.96)
-
-# Add global x and y labels, move them slightly outward
-fig.text(0.5, 0.13, 'Nominal FDP', ha='center', fontsize=22)  # Moved down slightly
-fig.text(0.03, 0.5, 'Observed Power', va='center', rotation='vertical', fontsize=22)  # Moved left slightly
-
-# Title for the entire plot
-# fig.suptitle("Comparison: Power for all 15 Datasets", fontsize=16)
-
-# Display the plot
-plt.savefig(os.path.join("figure-settingI", "comppowerI0.1.png"))
-# plt.show()
+out_dir = 'figure-settingI09'
+os.makedirs(out_dir, exist_ok=True)
+
+
+def load_settingI_data(sample):
+    df_list = []
+
+    for name in dataset_list:
+        df_ones = []
+        for j in range(1, n_itr + 1):
+            file_path = os.path.join(
+                "result-inter09",
+                f"{name} {sample:.2f}",
+                f"{name} {sample:.2f} {j}.csv"
+            )
+            df = pd.read_csv(file_path)
+            df_ones.append(df)
+
+        df = pd.concat(df_ones).groupby("fdp_nominals", as_index=False).mean()
+        df_list.append(df)
+
+    return df_list
+
+
+def prepare_figure():
+    fig, axs = plt.subplots(nrows=3, ncols=5, figsize=(22, 13.5))
+    axs = axs.flatten()
+
+    fig.patch.set_facecolor('white')
+    for ax in axs:
+        ax.set_facecolor('white')
+        ax.tick_params(axis='both', labelsize=18, width=1.2, length=5)
+
+    return fig, axs
+
+
+def style_spines(axs):
+    for ax in axs:
+        ax.grid(True)
+        for spine in ax.spines.values():
+            spine.set_visible(True)
+            spine.set_linewidth(1.5)
+            spine.set_edgecolor('#666666')
+
+
+def plot_panel(ax, x, y, label, color):
+    ax.plot(
+        x, y,
+        label=label,
+        marker='o',
+        color=color,
+        alpha=0.8,
+        linewidth=2.5,
+        markersize=5
+    )
+
+
+def draw_grid(
+        df_list, x_cols, y_cols, xlabel, ylabel, filename,
+        diag=False, xticks=None
+):
+    fig, axs = prepare_figure()
+
+    for i, name in enumerate(dataset_list):
+        ax = axs[i]
+        df = df_list[i]
+
+        plot_panel(ax, df[x_cols[1]], df[y_cols[1]], 'RSI-CS', BRIGHT_GREEN)
+        plot_panel(ax, df[x_cols[2]], df[y_cols[2]], 'RSI-EC', BRIGHT_BLUE)
+        plot_panel(ax, df[x_cols[0]], df[y_cols[0]], 'Baseline', BRIGHT_RED)
+
+        if diag:
+            ax.plot([0.05, 0.55], [0.05, 0.55],
+                    color='grey', alpha=0.7, linestyle='-.')
+
+        if xticks is not None:
+            ax.set_xticks(xticks)
+            ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+
+        ax.set_title(name, fontsize=20)
+
+    style_spines(axs)
+
+    fig.subplots_adjust(
+        wspace=0.24,
+        hspace=0.28,
+        top=0.92,
+        bottom=0.18,
+        left=0.08,
+        right=0.96
+    )
+
+    fig.text(0.5, 0.10, xlabel, ha='center', fontsize=24)
+    fig.text(0.03, 0.5, ylabel, va='center', rotation='vertical', fontsize=24)
+
+    handles, labels = axs[0].get_legend_handles_labels()
+    legend = fig.legend(
+        handles, labels,
+        loc='lower center',
+        bbox_to_anchor=(0.5, 0.012),
+        ncol=3,
+        frameon=True,
+        fontsize=22,
+        columnspacing=2.5,
+        handletextpad=0.9,
+        borderpad=0.6,
+        labelspacing=0.8,
+        handlelength=2.8
+    )
+    legend.get_frame().set_edgecolor('#999999')
+    legend.get_frame().set_linewidth(1.2)
+
+    base_name = os.path.splitext(filename)[0]
+    plt.savefig(os.path.join(out_dir, f"{base_name}.pdf"), facecolor='white')
+    plt.close(fig)
+
+
+def run_for_sample(sample, suffix=''):
+    df_list = load_settingI_data(sample)
+
+    # FDP control
+    draw_grid(
+        df_list=df_list,
+        x_cols=['fdp_nominals', 'fdp_nominals', 'fdp_nominals'],
+        y_cols=['fdpn_cs2inter', 'fdpn_cs', 'fdpn_sh'],
+        xlabel='Nominal FDP',
+        ylabel='Observed FDP',
+        filename=f'compfdpI{suffix}.pdf',
+        diag=True,
+        xticks=NOMINAL_FDP_TICKS
+    )
+
+    # Observed FDP vs Observed Power
+    draw_grid(
+        df_list=df_list,
+        x_cols=['fdpn_cs2inter', 'fdpn_cs', 'fdpn_sh'],
+        y_cols=['powern_cs2inter', 'powern_cs', 'powern_sh'],
+        xlabel='Observed FDP',
+        ylabel='Observed Power',
+        filename=f'comppowerobI{suffix}.pdf',
+        diag=False
+    )
+
+    # Nominal FDP vs Observed Power
+    draw_grid(
+        df_list=df_list,
+        x_cols=['fdp_nominals', 'fdp_nominals', 'fdp_nominals'],
+        y_cols=['powern_cs2inter', 'powern_cs', 'powern_sh'],
+        xlabel='Nominal FDP',
+        ylabel='Observed Power',
+        filename=f'comppowerI{suffix}.pdf',
+        diag=False,
+        xticks=NOMINAL_FDP_TICKS
+    )
+
+
+# sample = 1.0
+run_for_sample(1.0, '')
+
+# sample = 0.10
+run_for_sample(0.10, '0.1')
