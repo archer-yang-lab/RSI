@@ -78,7 +78,7 @@ total_X = dataset.drop(columns=['MOLECULE', 'Act']).to_numpy()
 Xtc, Xtest, Ytc, Ytest = train_test_split(total_X, total_Y, test_size=15/100, shuffle=True) # tc: train and calib
 
 # ofdp_nominals = np.linspace(0.1, 0.5, 9)
-fdp_nominals = np.linspace(0.1, 1.0, 9)
+fdp_nominals = np.linspace(0.1, 1.0, 10)
 all_res = pd.DataFrame()
 epsilon = 1e-8
 
@@ -129,11 +129,15 @@ with Timer() as timer:
         # 1. Reset min_R_1 at the START of each loop for fdp_nominal.
         # This is a critical bug fix from your original code.
         min_R_1 = None
-
         # Search for the optimal R on the calibration set
-        for R in np.linspace(3, -3, 500):
+        threshold_grid = np.linspace(
+            np.max(z_calib1_1),
+            np.min(z_calib1_1),
+            500,
+        )
+        for R in threshold_grid:
             try_r_sel1 = [j for j in range(len(z_calib1_1)) if z_calib1_1[j] >= R]
-            try_fdr, _= eval_n(Ycalib1, try_r_sel1, threshold_1, threshold_2)
+            try_fdr, _ = eval_n(Ycalib1, try_r_sel1, threshold_1, threshold_2)
             # Check if the current FDP meets the condition
             if np.any(fdp_nominal >= try_fdr):
                 # Since R is decreasing, the last R that satisfies the condition is the minimum.
@@ -217,9 +221,9 @@ with Timer() as timer:
 all_res['fdpn_cs2union'] = fdpn_cs2union
 all_res['powern_cs2union'] = powern_cs2union
 
-out_dir = os.path.join('result-union', f'{dataset_name} {args.sample:.2f}')
+out_dir = os.path.join('result-union09', f'{dataset_name} {args.sample:.2f}')
 
 if not os.path.exists(out_dir):
     os.makedirs(out_dir)
 
-all_res.to_csv(os.path.join('result-union', f'{dataset_name} {args.sample:.2f}', f'{dataset_name} {args.sample:.2f} {args.seed}.csv'))
+all_res.to_csv(os.path.join('result-union09', f'{dataset_name} {args.sample:.2f}', f'{dataset_name} {args.sample:.2f} {args.seed}.csv'))

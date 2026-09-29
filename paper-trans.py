@@ -77,7 +77,7 @@ total_X = dataset.drop(columns=['MOLECULE', 'Act']).to_numpy()
 
 Xtc, Xtest, Ytc, Ytest = train_test_split(total_X, total_Y, test_size=15/100, shuffle=True) # tc: train and calib
 
-fdp_nominals = np.linspace(0.1, 1.0, 9)
+fdp_nominals = np.linspace(0.1, 1.0, 10)
 all_res = pd.DataFrame()
 all_res['fdp_nominals'] = fdp_nominals
 
@@ -173,9 +173,9 @@ all_res['powerreg_cs'] = powerreg_cs
 all_res['fdpbreg_cs'] = fdpbreg_cs
 all_res['powerbreg_cs'] = powerbreg_cs
 
-out_dir = os.path.join('result-trans', f'{dataset_name} {args.sample:.2f}')
+out_dir = os.path.join('result-tran09', f'{dataset_name} {args.sample:.2f}')
 
 if not os.path.exists(out_dir):
     os.makedirs(out_dir)
 
-all_res.to_csv(os.path.join('result-trans', f'{dataset_name} {args.sample:.2f}', f'{dataset_name} {args.sample:.2f} {args.seed}.csv'))
+all_res.to_csv(os.path.join('result-tran09', f'{dataset_name} {args.sample:.2f}', f'{dataset_name} {args.sample:.2f} {args.seed}.csv'))

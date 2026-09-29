@@ -77,7 +77,7 @@ total_X = dataset.drop(columns=['MOLECULE', 'Act']).to_numpy()
 Xtc, Xtest, Ytc, Ytest = train_test_split(total_X, total_Y, test_size=15/100, shuffle=True) # tc: train and calib
 
 # ofdp_nominals = np.linspace(0.1, 0.5, 9)
-fdp_nominals = np.linspace(0.1, 1.0, 9)
+fdp_nominals = np.linspace(0.1, 1.0, 10)
 all_res = pd.DataFrame()
 
 # all_res['ofdp_nominals'] = ofdp_nominals
@@ -161,12 +161,12 @@ all_res['fdpbreg_cs'] = fdpbreg_cs
 all_res['powerbreg_cs'] = powerbreg_cs
 all_res['time_cs'] = [timer.runtime] * len(fdp_nominals)
 
-out_dir = os.path.join('result-score', f'{dataset_name} {args.sample:.2f}')
+out_dir = os.path.join('result-score09', f'{dataset_name} {args.sample:.2f}')
 
 if not os.path.exists(out_dir):
     os.makedirs(out_dir)
 
-all_res.to_csv(os.path.join('result-score', f'{dataset_name} {args.sample:.2f}', f'{dataset_name} {args.sample:.2f} {args.seed}.csv'))
+all_res.to_csv(os.path.join('result-score09', f'{dataset_name} {args.sample:.2f}', f'{dataset_name} {args.sample:.2f} {args.seed}.csv'))
 
 ''' single stage conformal selection + signed error score + uncertainty'''
 fdpn_csunsigned, powern_csunsigned= [], []
@@ -246,9 +246,9 @@ all_res['fdpreg_csun'] = fdpreg_csun
 all_res['powerreg_csun'] = powerreg_csun
 all_res['time_csun'] = [timer.runtime] * len(fdp_nominals)
 
-out_dir = os.path.join('result-score', f'{dataset_name} {args.sample:.2f}')
+out_dir = os.path.join('result-score09', f'{dataset_name} {args.sample:.2f}')
 
 if not os.path.exists(out_dir):
     os.makedirs(out_dir)
 
-all_res.to_csv(os.path.join('result-score', f'{dataset_name} {args.sample:.2f}', f'{dataset_name} {args.sample:.2f} {args.seed}.csv'))
+all_res.to_csv(os.path.join('result-score09', f'{dataset_name} {args.sample:.2f}', f'{dataset_name} {args.sample:.2f} {args.seed}.csv'))

@@ -78,8 +78,8 @@ if args.sample < 1:
     dataset = dataset.sample(frac=args.sample)
 
 ##
-thresholds_map1 = {'NK1': 8.5, 'PGP': 0.1, 'LOGD': 3, '3A4': 4.5, 'CB1': 6.5, 'DPP4': 6, 'HIVINT': 6, 'HIVPROT': 7, 'METAB': 40, 'OX1': 5.8, 'OX2': 6, 'PPB': 1, 'RAT_F': 1.0, 'TDI': 0, 'THROMBIN': 6}
-thresholds_map2 = {'NK1': 9.5, 'PGP': 0.8, 'LOGD': 5, '3A4': 6, 'CB1': 8.0, 'DPP4': 7, 'HIVINT': 7, 'HIVPROT': 9, 'METAB': 70, 'OX1': 7.5, 'OX2': 8, 'PPB': 2, 'RAT_F': 1.9, 'TDI': 1, 'THROMBIN': 9}
+thresholds_map1 = {'NK1': 8.5, 'PGP': 0.1, 'LOGD': 3, '3A4': 4.5, 'CB1': 6.5, 'DPP4': 6, 'HIVINT': 6, 'HIVPROT': 7, 'METAB': 40, 'OX1': 5.8, 'OX2': 6, 'PPB': 1, 'RAT_F': 1.0, 'TDI': 0, 'THROMBIN': 6, 'hERG': 5}
+thresholds_map2 = {'NK1': 9.5, 'PGP': 0.8, 'LOGD': 5, '3A4': 6, 'CB1': 8.0, 'DPP4': 7, 'HIVINT': 7, 'HIVPROT': 9, 'METAB': 70, 'OX1': 7.5, 'OX2': 8, 'PPB': 2, 'RAT_F': 1.9, 'TDI': 1, 'THROMBIN': 9, 'hERG': 6}
 
 
 threshold_1 = thresholds_map1[dataset_name]
@@ -90,10 +90,12 @@ total_X = dataset.drop(columns=['MOLECULE', 'Act']).to_numpy()
 
 Xtc, Xtest, Ytc, Ytest = train_test_split(total_X, total_Y, test_size=15/100, shuffle=True) # tc: train and calib
 
-fdp_nominals = np.linspace(0.1, 1.0, 9)
+# ofdp_nominals = np.linspace(0.1, 0.5, 9)
+fdp_nominals = np.linspace(0.1, 1.0, 10)
 all_res = pd.DataFrame()
 epsilon = 1e-8
 
+# all_res['ofdp_nominals'] = ofdp_nominals
 all_res['fdp_nominals'] = fdp_nominals
 
 ''' single stage'''
@@ -182,7 +184,7 @@ all_res['fdpn_cs'] = fdpn_cs
 all_res['powern_cs'] = powern_cs
 all_res['time_cs'] = [timer.runtime] * len(fdp_nominals)
 
-''' two stage Baseline conformal selection'''
+''' two stage conformal selection'''
 fdpn_cs2inter, powern_cs2inter= [], []
 with Timer() as timer:
     Xtrain, Xcalib, Ytrain, Ycalib = train_test_split(Xtc, Ytc, train_size=50/85, shuffle=True)
@@ -210,9 +212,9 @@ all_res['fdpn_cs2inter'] = fdpn_cs2inter
 all_res['powern_cs2inter'] = powern_cs2inter
 
 
-out_dir = os.path.join('result-inter', f'{dataset_name} {args.sample:.2f}')
+out_dir = os.path.join('result-inter09', f'{dataset_name} {args.sample:.2f}')
 
 if not os.path.exists(out_dir):
     os.makedirs(out_dir)
 
-all_res.to_csv(os.path.join('result-inter', f'{dataset_name} {args.sample:.2f}', f'{dataset_name} {args.sample:.2f} {args.seed}.csv'))
+all_res.to_csv(os.path.join('result-inter09', f'{dataset_name} {args.sample:.2f}', f'{dataset_name} {args.sample:.2f} {args.seed}.csv'))
