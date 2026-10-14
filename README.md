@@ -189,7 +189,7 @@ This aggregated file is the input used by the cost-aware plotting scripts.
 Use `plot-cost.py` to generate method-separated figures over the 15 QSAR datasets. This script can draw the absolute cost/FDP/power plots, the delta plots relative to `eta = 0`, or both.
 
 ```bash
-python plot-cost.py 1.00 \
+python plot-cost.py 100 \
   --result_dir result-cost-0518raw \
   --output_dir figure-cost-0518raw \
   --q_values 0.2 0.3 \
