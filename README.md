@@ -101,7 +101,7 @@ For `plot-model.py`:
 
 ### 3. Cost-aware RSI extension
 
-The cost-aware extension studies Setting I when false discoveries from the two clear regions have asymmetric downstream costs. In the current implementation, a selected compound with true response `Y <= c1` receives cost `c_fail`, while a selected compound with true response `Y >= c2` receives cost `c_pass`. The default setting is `c_fail = 10` and `c_pass = 1`.
+The cost-aware extension studies Setting I when false discoveries from the two clear regions have asymmetric downstream costs. In the current implementation, a selected compound with true response `Y <= c1` receives cost `c_fail`, while a selected compound with true response `Y >= c2` receives cost `c_pass`. The default setting is `c_fail = 50` and `c_pass = 1`.
 
 The main experiment script is:
 
