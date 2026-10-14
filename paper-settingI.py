@@ -193,12 +193,12 @@ with Timer() as timer:
     Ycalib_pred = rf.predict(Xcalib)
     Ytest_pred = rf.predict(Xtest)
     for i, fdp_nominal in enumerate(fdp_nominals):
-        calib_scores_2clip = 1000 * (threshold_1 <= Ycalib) - Ycalib_pred
+        calib_scores_2clip = 1000 * (threshold_1 < Ycalib) - Ycalib_pred
         test_scores = -Ytest_pred
         BH_2clipstep1 = BH(calib_scores_2clip, test_scores, fdp_nominal)
 
-        calib_scores_2clip = 1000 * (threshold_2 > Ycalib) - Ycalib_pred
-        test_scores = -Ytest_pred
+        calib_scores_2clip = 1000 * (threshold_2 > Ycalib) + Ycalib_pred
+        test_scores = Ytest_pred
         BH_2clipstep2 = BH(calib_scores_2clip, test_scores, fdp_nominal)
         BH_2clip_inter = np.intersect1d(BH_2clipstep1, BH_2clipstep2)
         BH_2clip = BH_2clip_inter.astype(int)
@@ -212,9 +212,9 @@ all_res['fdpn_cs2inter'] = fdpn_cs2inter
 all_res['powern_cs2inter'] = powern_cs2inter
 
 
-out_dir = os.path.join('result-inter09', f'{dataset_name} {args.sample:.2f}')
+out_dir = os.path.join('result-inter', f'{dataset_name} {args.sample:.2f}')
 
 if not os.path.exists(out_dir):
     os.makedirs(out_dir)
 
-all_res.to_csv(os.path.join('result-inter09', f'{dataset_name} {args.sample:.2f}', f'{dataset_name} {args.sample:.2f} {args.seed}.csv'))
+all_res.to_csv(os.path.join('result-inter', f'{dataset_name} {args.sample:.2f}', f'{dataset_name} {args.sample:.2f} {args.seed}.csv'))
