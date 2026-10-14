@@ -530,7 +530,7 @@ def make_method_delta_figure(dataset_list, sample, q_value, method, result_dir, 
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Plot cost-aware RSI results by averaging seed-level files directly.")
-    parser.add_argument("n_itr", type=int, help="Number of seed files to average, as in plot-settingI.py.")
+    parser.add_argument("n_itr", type=int, default=100, help="Number of seed files to average, as in plot-settingI.py.")
     parser.add_argument("--sample", type=float, default=1.0)
     parser.add_argument("--seed_start", type=int, default=1)
     parser.add_argument("--result_dir", type=str, default="result-cost")
